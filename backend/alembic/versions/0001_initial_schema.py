@@ -142,24 +142,26 @@ def upgrade() -> None:
     op.create_index("ix_documents_uploaded_by_user_id", "documents", ["uploaded_by_user_id"], unique=False)
     
     # Ensure audit_events is append-only
-    op.execute(
-        """
-        CREATE OR REPLACE FUNCTION prevent_audit_update_delete()
-        RETURNS TRIGGER AS $$
-        BEGIN
-            RAISE EXCEPTION 'Audit events cannot be modified or deleted.';
-        END;
-        $$ LANGUAGE plpgsql;
-        """
-    )
-    op.execute(
-        """
-        CREATE TRIGGER trg_audit_append_only
-        BEFORE UPDATE OR DELETE ON audit_events
-        FOR EACH ROW
-        EXECUTE FUNCTION prevent_audit_update_delete();
-        """
-    )
+    bind = op.get_bind()
+    if bind.engine.name == 'postgresql':
+        op.execute(
+            """
+            CREATE OR REPLACE FUNCTION prevent_audit_update_delete()
+            RETURNS TRIGGER AS $$
+            BEGIN
+                RAISE EXCEPTION 'Audit events cannot be modified or deleted.';
+            END;
+            $$ LANGUAGE plpgsql;
+            """
+        )
+        op.execute(
+            """
+            CREATE TRIGGER trg_audit_append_only
+            BEFORE UPDATE OR DELETE ON audit_events
+            FOR EACH ROW
+            EXECUTE FUNCTION prevent_audit_update_delete();
+            """
+        )
     op.create_table(
         "extracted_fields",
         sa.Column("id", sa.Uuid(), nullable=False),

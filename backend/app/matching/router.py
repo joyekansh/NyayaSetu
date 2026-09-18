@@ -60,6 +60,33 @@ def list_matches(
     if not decision.allowed:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=decision.reason)
 
-    return {"matches": matcher(case_id=case.id, case_fields={})}
+    matches = matcher(case_id=case.id, case_fields={})
+    _persist_matches(db, case.id, matches)
 
+    return {"matches": matches}
+
+
+def _persist_matches(db: Session, case_id: uuid.UUID, matches: list[dict[str, object]]) -> None:
+    from app.models.scheme_match import MatchStatus, SchemeMatch
+
+    for match in matches:
+        existing = (
+            db.query(SchemeMatch)
+            .filter_by(case_id=case_id, scheme_id=match["scheme_id"], clause_id=match["clause_id"])
+            .one_or_none()
+        )
+        if existing is None:
+            db.add(
+                SchemeMatch(
+                    case_id=case_id,
+                    scheme_id=str(match["scheme_id"]),
+                    clause_id=str(match["clause_id"]),
+                    confidence_score=float(match["final_confidence"]),
+                    status=MatchStatus.PENDING,
+                )
+            )
+        else:
+            existing.confidence_score = float(match["final_confidence"])
+    if matches:
+        db.commit()
 
