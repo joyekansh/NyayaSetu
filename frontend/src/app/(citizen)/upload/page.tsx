@@ -6,30 +6,29 @@
  * OWNER: Akash.
  *
  * No doc-type dropdown — the backend OCR auto-identifies the document.
- * Speech input (Hindi + English) will be wired in the next sprint.
+ * Speech input (Hindi + English) is live via the Web Speech API.
  */
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import CameraCapture from '@/components/CameraCapture';
 import { HttpError } from '@/lib/httpClient';
 import { citizenCaseApi } from '@/lib/citizenCaseApi';
 import { documentApi } from '@/lib/documentApi';
 import type { CaseSummary, Language } from '@/types/api';
 
-const GRIEVANCE_OPTIONS = [
-  { value: 'Eviction or housing', icon: '🏠', desc: 'Notice to leave, illegal eviction' },
-  { value: 'Unpaid wages', icon: '💰', desc: 'Withheld salary or dues' },
-  { value: 'Domestic violence', icon: '🛡️', desc: 'Threats, abuse, or harassment at home' },
-  { value: 'Police or detention', icon: '⚖️', desc: 'Arrest, detention, or FIR matter' },
-  { value: 'Compensation claim', icon: '📋', desc: 'Accident, medical, or employer claim' },
-  { value: 'Something else', icon: '💬', desc: 'Any other legal problem' },
-];
+// Extend Window for webkit prefix
+declare global {
+  interface Window {
+    SpeechRecognition: typeof SpeechRecognition;
+    webkitSpeechRecognition: typeof SpeechRecognition;
+  }
+}
 
 interface Staged {
   file: Blob;
   previewUrl: string;
-  uploadedId?: string;
+  isPdf: boolean;
 }
 
 export default function CitizenUploadPage() {
@@ -47,8 +46,10 @@ export default function CitizenUploadPage() {
   // Step 2 — Documents
   const [staged, setStaged] = useState<Staged[]>([]);
 
-  // Step 3 — Grievance
-  const [grievance, setGrievance] = useState(GRIEVANCE_OPTIONS[0].value);
+  // Step 3 — Grievance (free text + voice)
+  const [grievance, setGrievance] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   // Step 4 — Consent
   const [consent, setConsent] = useState(false);
@@ -60,8 +61,43 @@ export default function CitizenUploadPage() {
 
   const step1Valid = district.trim() !== '';
   const step2Valid = staged.length > 0;
-  const step3Valid = grievance !== '';
+  const step3Valid = grievance.trim().length > 2;
   const canSubmit = consent && !submitting;
+
+  const toggleRecording = useCallback(() => {
+    const SpeechRec =
+      typeof window !== 'undefined'
+        ? window.SpeechRecognition || window.webkitSpeechRecognition
+        : null;
+    if (!SpeechRec) {
+      alert('Speech recognition is not supported in this browser. Try Chrome or Edge.');
+      return;
+    }
+    if (isRecording && recognitionRef.current) {
+      recognitionRef.current.stop();
+      setIsRecording(false);
+      return;
+    }
+    const rec = new SpeechRec();
+    rec.lang = language === 'hi' ? 'hi-IN' : 'en-IN';
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.onresult = (event: SpeechRecognitionEvent) => {
+      let transcript = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+      }
+      setGrievance((prev) => {
+        const base = prev.trimEnd();
+        return base ? base + ' ' + transcript : transcript;
+      });
+    };
+    rec.onerror = () => setIsRecording(false);
+    rec.onend = () => setIsRecording(false);
+    recognitionRef.current = rec;
+    rec.start();
+    setIsRecording(true);
+  }, [isRecording, language]);
 
   async function submit() {
     setSubmitting(true);
@@ -87,7 +123,7 @@ export default function CitizenUploadPage() {
           caseId: created.id,
           file: item.file,
           // No docType — backend OCR will auto-identify
-          filename: `document_${i + 1}.jpg`,
+          filename: item.isPdf ? `document_${i + 1}.pdf` : `document_${i + 1}.jpg`,
         });
       }
 
@@ -243,7 +279,10 @@ export default function CitizenUploadPage() {
           <CameraCapture
             disabled={submitting}
             onCapture={(file, previewUrl) =>
-              setStaged((prev) => [...prev, { file, previewUrl }])
+              setStaged((prev) => [
+                ...prev,
+                { file, previewUrl, isPdf: file.type === 'application/pdf' },
+              ])
             }
           />
 
@@ -261,12 +300,19 @@ export default function CitizenUploadPage() {
                     key={item.previewUrl}
                     className="group relative overflow-hidden rounded-xl border border-surface-200 bg-surface-50 animate-slide-up"
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={item.previewUrl}
-                      alt={`Document ${i + 1} preview`}
-                      className="h-36 w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    />
+                    {item.isPdf ? (
+                      <div className="h-36 w-full flex flex-col items-center justify-center bg-red-50 text-red-500">
+                        <span className="text-4xl">📄</span>
+                        <span className="text-xs font-medium mt-1">PDF Document</span>
+                      </div>
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={item.previewUrl}
+                        alt={`Document ${i + 1} preview`}
+                        className="h-36 w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                    )}
                     <div className="flex items-center justify-between px-3 py-2 text-xs bg-white">
                       <span className="font-medium text-surface-600">
                         Document {i + 1}
@@ -311,44 +357,64 @@ export default function CitizenUploadPage() {
       {/* ---- STEP 3: Grievance ---- */}
       {step === 3 && (
         <section className="card-flat space-y-5 animate-slide-up">
-          <StepHeader n={3} icon="⚖️" title="What do you need help with?" />
+          <StepHeader n={3} icon="⚖️" title="Describe your problem" />
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Select your grievance">
-            {GRIEVANCE_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                role="radio"
-                aria-checked={grievance === opt.value}
-                onClick={() => setGrievance(opt.value)}
-                className={`flex items-start gap-4 rounded-xl border-2 p-4 text-left transition-all duration-200 hover:border-brand-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
-                  grievance === opt.value
-                    ? 'border-brand-500 bg-brand-50 shadow-card'
-                    : 'border-surface-200 bg-surface-50'
-                }`}
-              >
-                <span className="text-2xl leading-none mt-0.5" aria-hidden="true">
-                  {opt.icon}
-                </span>
-                <div>
-                  <p className={`text-sm font-semibold ${grievance === opt.value ? 'text-brand-700' : 'text-surface-800'}`}>
-                    {opt.value}
-                  </p>
-                  <p className="text-xs text-surface-500 mt-0.5 leading-relaxed">
-                    {opt.desc}
-                  </p>
-                </div>
-                {grievance === opt.value && (
-                  <span className="ml-auto text-brand-500 font-bold text-lg leading-none">✓</span>
-                )}
-              </button>
-            ))}
+          <p className="text-sm text-surface-500 leading-relaxed -mt-1">
+            In your own words, describe what happened and what help you need.
+            You can type in <strong>any language</strong> or use the
+            microphone to speak.
+          </p>
+
+          {/* Text area + mic button */}
+          <div className="relative">
+            <textarea
+              id="grievance-text"
+              value={grievance}
+              onChange={(e) => setGrievance(e.target.value)}
+              rows={6}
+              placeholder={
+                language === 'hi'
+                  ? 'यहाँ अपनी समस्या लिखें या माइक बटन दबाकर बोलें…'
+                  : 'Type what happened here, or press the mic button to speak…'
+              }
+              className={`input-field resize-none pr-14 transition-all duration-200 ${
+                isRecording ? 'border-red-400 ring-2 ring-red-200' : ''
+              }`}
+              aria-label="Describe your grievance"
+            />
+            {/* Mic button — pinned inside the textarea bottom-right */}
+            <button
+              type="button"
+              onClick={toggleRecording}
+              title={isRecording ? 'Stop recording' : 'Start voice input'}
+              aria-label={isRecording ? 'Stop voice recording' : 'Start voice recording'}
+              className={`absolute bottom-3 right-3 flex h-10 w-10 items-center justify-center rounded-full border-2 text-lg transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                isRecording
+                  ? 'border-red-400 bg-red-500 text-white animate-pulse shadow-lg'
+                  : 'border-surface-300 bg-white text-surface-600 hover:border-brand-400 hover:bg-brand-50'
+              }`}
+            >
+              🎙️
+            </button>
           </div>
+
+          {isRecording && (
+            <p className="flex items-center gap-2 text-sm text-red-600 font-medium animate-pulse">
+              <span className="h-2 w-2 rounded-full bg-red-500 inline-block" />
+              Listening… Speak now. Tap the mic again to stop.
+            </p>
+          )}
 
           <div className="flex justify-between pt-2">
             <button
               type="button"
-              onClick={() => setStep(2)}
+              onClick={() => {
+                if (isRecording && recognitionRef.current) {
+                  recognitionRef.current.stop();
+                  setIsRecording(false);
+                }
+                setStep(2);
+              }}
               className="btn-secondary"
             >
               ← Back
