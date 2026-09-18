@@ -3,3 +3,4 @@ __pycache__/
 .env
 *.py[cod]
 .worktrees/
+node_modules/
