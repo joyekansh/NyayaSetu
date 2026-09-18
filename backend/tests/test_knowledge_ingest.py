@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 
 def test_load_scheme_fixture_from_json_file(tmp_path) -> None:
@@ -42,3 +43,14 @@ def test_load_scheme_fixture_from_json_file(tmp_path) -> None:
     assert clauses[0]["clause_id"] == "active"
     assert clauses[0]["citation"] == "Legal Services Authorities Act, 1987, Section 12(c)"
 
+
+def test_bundled_scheme_fixtures_are_valid() -> None:
+    from app.knowledge_base.ingest import flatten_active_clauses, load_scheme_fixture
+
+    fixture_dir = Path(__file__).resolve().parents[1] / "app" / "knowledge_base" / "fixtures"
+    fixtures = sorted(fixture_dir.glob("*.json"))
+
+    assert fixtures
+    for path in fixtures:
+        fixture = load_scheme_fixture(path)
+        assert flatten_active_clauses(fixture)

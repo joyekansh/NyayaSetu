@@ -1,0 +1,28 @@
+name: Backend CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - feat/backend-docker-foundation
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    env:
+      POSTGRES_DB: nyayasetu
+      POSTGRES_USER: nyayasetu
+      POSTGRES_PASSWORD: nyayasetu
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: docker build -q -t nyayasetu-backend-ci backend
+
+      - name: Run backend tests
+        run: docker run --rm nyayasetu-backend-ci python -m pytest -q -p no:cacheprovider
+
+      - name: Validate compose config
+        run: docker compose config
+

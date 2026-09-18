@@ -1,0 +1,33 @@
+{
+  "scheme_id": "nalsa-free-legal-aid",
+  "scheme_name": "NALSA Free Legal Aid",
+  "jurisdiction": "IN",
+  "version": "2026-09-18",
+  "clauses": [
+    {
+      "clause_id": "lsa-1987-s12-c",
+      "act_name": "Legal Services Authorities Act, 1987",
+      "section": "12(c)",
+      "text": "A woman or a child is entitled to legal services under the Legal Services Authorities Act, 1987.",
+      "eligibility_criteria": {
+        "category": {
+          "in": ["woman", "child"]
+        }
+      },
+      "active": true
+    },
+    {
+      "clause_id": "lsa-1987-s12-h",
+      "act_name": "Legal Services Authorities Act, 1987",
+      "section": "12(h)",
+      "text": "A person whose annual income is below the prescribed threshold is entitled to legal services.",
+      "eligibility_criteria": {
+        "annual_income": {
+          "lte": 300000
+        }
+      },
+      "active": true
+    }
+  ]
+}
+
