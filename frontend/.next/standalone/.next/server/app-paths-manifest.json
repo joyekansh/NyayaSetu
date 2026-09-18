@@ -1,6 +1,0 @@
-{
-  "/_not-found/page": "app/_not-found/page.js",
-  "/(citizen)/status/[caseId]/page": "app/(citizen)/status/[caseId]/page.js",
-  "/(citizen)/upload/page": "app/(citizen)/upload/page.js",
-  "/(citizen)/dossier/[caseId]/page": "app/(citizen)/dossier/[caseId]/page.js"
-}
