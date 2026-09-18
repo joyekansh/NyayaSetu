@@ -19,5 +19,6 @@ class Referral(Base):
     summary: Mapped[str] = mapped_column(Text, nullable=False)
     referred_schemes: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    document_id: Mapped[str | None] = mapped_column(String(256), nullable=True)
 
     case: Mapped["CaseRecord"] = relationship("CaseRecord")

@@ -20,7 +20,7 @@ def client() -> tuple[TestClient, sessionmaker[Session], MagicMock]:
     engine = create_engine("sqlite+pysqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     Base.metadata.create_all(engine)
     factory = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
-    matcher = MagicMock(return_value=[{"citation": "Act, Section 12", "final_confidence": 0.8}])
+    matcher = MagicMock(return_value=[{"scheme_id": "test_scheme", "clause_id": "test_clause", "citation": "Act, Section 12", "final_confidence": 0.8}])
 
     def override_db():
         session = factory()

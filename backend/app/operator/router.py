@@ -11,7 +11,11 @@ from app.db import get_db
 from app.models.case import CaseStatus, UrgencyTier, requires_human_review
 from app.models.case_record import CaseRecord
 from app.models.user import UserRole
-
+from app.models.scheme_match import SchemeMatch, MatchStatus
+from app.config import get_settings
+from app.intake.storage import LocalDocumentStorage
+import io
+from reportlab.pdfgen import canvas
 router = APIRouter(prefix="/operator", tags=["operator"])
 
 
@@ -90,27 +94,62 @@ def create_referral(
     if case is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="case not found")
     
+    # Generate PDF Referral Artifact
+    buffer = io.BytesIO()
+    p = canvas.Canvas(buffer)
+    p.setFont("Helvetica-Bold", 16)
+    p.drawString(100, 800, f"NyayaSetu Referral Document")
+    p.setFont("Helvetica", 12)
+    p.drawString(100, 770, f"Case ID: {case_id}")
+    p.drawString(100, 750, f"Prepared By: {current_user.display_name} (ID: {current_user.id})")
+    p.drawString(100, 720, "Summary:")
+    # Text wrapping is manual in raw canvas, but we'll keep it simple for the artifact
+    summary_lines = body.summary.split('\n')
+    y = 700
+    for line in summary_lines:
+        p.drawString(100, y, line[:80]) # very naive wrap
+        y -= 20
+        
+    p.drawString(100, y - 20, "Referred Schemes:")
+    schemes_lines = body.referred_schemes.split('\n')
+    y -= 40
+    for line in schemes_lines:
+        p.drawString(100, y, line[:80])
+        y -= 20
+        
+    p.showPage()
+    p.save()
+    
+    pdf_bytes = buffer.getvalue()
+    settings = get_settings()
+    storage = LocalDocumentStorage(settings.storage_dir)
+    storage_key = storage.save(case_id=case_id, filename="referral.pdf", content=pdf_bytes)
+
     referral = Referral(
         case_id=case_id,
         operator_id=str(current_user.id),
         summary=body.summary,
-        referred_schemes=body.referred_schemes
+        referred_schemes=body.referred_schemes,
+        document_id=storage_key
     )
     db.add(referral)
     case.status = CaseStatus.REFERRED
     AuditEventRepository(db).append(
         case.id,
         "REFERRAL_CREATED",
-        {"operator_id": str(current_user.id), "summary": body.summary, "referred_schemes": body.referred_schemes},
+        {"operator_id": str(current_user.id), "summary": body.summary, "referred_schemes": body.referred_schemes, "document_id": storage_key},
     )
     db.commit()
-    return {"status": case.status.value}
+    return {"status": case.status.value, "document_id": storage_key}
 
 
 @router.post('/cases/{case_id}/matches/{clause_id}/approve')
 def approve_match(case_id: uuid.UUID, clause_id: str, db: Session = Depends(get_db), current_user: CurrentUser = Depends(require_operator)) -> dict[str, str]:
     case = db.get(CaseRecord, case_id)
     if case is None: raise HTTPException(status_code=404, detail='case not found')
+    match = db.query(SchemeMatch).filter_by(case_id=case_id, clause_id=clause_id).first()
+    if match:
+        match.status = MatchStatus.APPROVED
     AuditEventRepository(db).append(case.id, 'MATCH_APPROVED', {'operator_id': str(current_user.id), 'clause_id': clause_id})
     db.commit()
     return {'status': 'approved'}
@@ -119,6 +158,9 @@ def approve_match(case_id: uuid.UUID, clause_id: str, db: Session = Depends(get_
 def reject_match(case_id: uuid.UUID, clause_id: str, db: Session = Depends(get_db), current_user: CurrentUser = Depends(require_operator)) -> dict[str, str]:
     case = db.get(CaseRecord, case_id)
     if case is None: raise HTTPException(status_code=404, detail='case not found')
+    match = db.query(SchemeMatch).filter_by(case_id=case_id, clause_id=clause_id).first()
+    if match:
+        match.status = MatchStatus.REJECTED
     AuditEventRepository(db).append(case.id, 'MATCH_REJECTED', {'operator_id': str(current_user.id), 'clause_id': clause_id})
     db.commit()
     return {'status': 'rejected'}

@@ -60,6 +60,28 @@ def list_matches(
     if not decision.allowed:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=decision.reason)
 
-    return {"matches": matcher(case_id=case.id, case_fields={})}
+    matches = matcher(case_id=case.id, case_fields={})
+    
+    from app.models.scheme_match import SchemeMatch, MatchStatus
+    from sqlalchemy.dialects.postgresql import insert
+    
+    if matches:
+        # Bulk upsert the matches to the database
+        stmt = insert(SchemeMatch).values([
+            {
+                "case_id": case.id,
+                "scheme_id": match["scheme_id"],
+                "clause_id": match["clause_id"],
+                "confidence_score": match["final_confidence"],
+                "status": MatchStatus.PENDING
+            } for match in matches
+        ])
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["case_id", "scheme_id", "clause_id"],
+            set_={"confidence_score": stmt.excluded.confidence_score}
+        )
+        db.execute(stmt)
+        db.commit()
 
+    return {"matches": matches}
 

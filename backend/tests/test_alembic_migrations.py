@@ -29,6 +29,8 @@ def test_baseline_migration_matches_current_model_metadata(tmp_path: Path) -> No
     from app.models.document import Document  # noqa: F401
     from app.models.extracted_field import ExtractedField  # noqa: F401
     from app.models.user import User  # noqa: F401
+    from app.models.scheme_match import SchemeMatch  # noqa: F401
+    from app.models.referral import Referral  # noqa: F401
 
     database_url = f"sqlite:///{tmp_path / 'migrations.db'}"
     upgrade = _run_alembic(database_url, "upgrade", "head")
