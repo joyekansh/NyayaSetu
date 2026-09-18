@@ -141,7 +141,7 @@ def upgrade() -> None:
     )
     op.create_index("ix_documents_case_id", "documents", ["case_id"], unique=False)
     op.create_index("ix_documents_uploaded_by_user_id", "documents", ["uploaded_by_user_id"], unique=False)
-    
+
     if op.get_bind().dialect.name == "postgresql":
         # Ensure audit_events is append-only at the database boundary.
         op.execute(

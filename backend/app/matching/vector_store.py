@@ -1,10 +1,39 @@
 import json
+import re
 from typing import Any
 
 import chromadb
 from chromadb.config import Settings as ChromaSettings
 
 from app.config import get_settings
+
+
+class InMemoryVectorStore:
+    """Deterministic lexical retrieval for tests and offline demos."""
+
+    def __init__(self) -> None:
+        self._clauses: list[dict[str, Any]] = []
+
+    def ingest_clauses(self, clauses: list[dict[str, Any]]) -> None:
+        self._clauses = list(clauses)
+
+    def search(self, query: str, *, limit: int) -> list[dict[str, object]]:
+        query_terms = _terms(query)
+        scored: list[tuple[float, dict[str, object]]] = []
+        for clause in self._clauses:
+            haystack = " ".join(
+                str(clause.get(key, ""))
+                for key in ("scheme_name", "act_name", "section", "text", "eligibility_criteria")
+            )
+            clause_terms = _terms(haystack)
+            score = len(query_terms & clause_terms) / max(1, len(query_terms))
+            scored.append((score, {**clause, "score": score}))
+        scored.sort(key=lambda item: item[0], reverse=True)
+        return [hit for _, hit in scored[:limit]]
+
+
+def _terms(text: str) -> set[str]:
+    return {term for term in re.findall(r"[a-z0-9_]+", text.lower()) if len(term) > 2}
 
 
 class ChromaAdapter:

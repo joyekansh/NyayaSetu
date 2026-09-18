@@ -16,3 +16,4 @@ passlib[bcrypt]==1.7.4
 pytesseract==0.3.13
 Pillow==11.1.0
 google-genai>=0.2.0,<1.0
+reportlab
