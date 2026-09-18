@@ -116,8 +116,12 @@ export async function apiFetch<T>(
 
   if (!response.ok) {
     const errorBody = payload as ApiErrorBody | null;
-    const message =
-      errorBody?.detail ?? `Request failed with status ${response.status}`;
+    const detail = errorBody?.detail;
+    const message = typeof detail === 'string' 
+      ? detail 
+      : detail 
+        ? JSON.stringify(detail) 
+        : `Request failed with status ${response.status}`;
 
     if (response.status === 401) {
       redirectToLogin();
@@ -128,13 +132,13 @@ export async function apiFetch<T>(
       // Specifically the gate.py branch: operator hit a case-tier-restricted
       // endpoint (e.g. /matches on a Critical/High case not yet reclassified).
       throw new GatedCaseError(
-        errorBody?.code === "CASE_GATED" || path.includes("/matches")
+        path.includes("/matches")
           ? "This case is gated pending triage review. You're not authorized to view matches for this case tier yet."
           : message
       );
     }
 
-    throw new ApiError(message, response.status, errorBody?.code);
+    throw new ApiError(message, response.status);
   }
 
   return payload as T;
