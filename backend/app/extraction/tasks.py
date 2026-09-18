@@ -74,8 +74,17 @@ class DocumentExtractionProcessor:
 
         try:
             raw_bytes = self._storage.load(storage_key=document.storage_key)
-            text = self._ocr.extract_text(raw_bytes)
-            parsed = parser_for(document.document_type).parse(text)
+            
+            from app.models.document import DocumentType
+            if document.document_type == DocumentType.SPEECH_RECORDING:
+                from app.extraction.parsers.gemini_audio_parser import GeminiAudioParser
+                # We instantiate lazily so we don't need GEMINI_API_KEY for tests if unused
+                parser = GeminiAudioParser()
+                parsed = parser.parse_audio(raw_bytes, document.content_type)
+            else:
+                text = self._ocr.extract_text(raw_bytes)
+                parsed = parser_for(document.document_type).parse(text)
+                
             for field in parsed.fields:
                 self._session.add(
                     ExtractedField(
