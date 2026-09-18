@@ -54,6 +54,9 @@ services:
       REDIS_URL: redis://redis:6379/0
       CHROMA_HOST: chroma
       CHROMA_PORT: "8000"
+      DOCUMENT_STORAGE_ROOT: /app/data/documents
+    volumes:
+      - document_data:/app/data/documents
     depends_on:
       postgres:
         condition: service_healthy
@@ -79,6 +82,9 @@ services:
       REDIS_URL: redis://redis:6379/0
       CHROMA_HOST: chroma
       CHROMA_PORT: "8000"
+      DOCUMENT_STORAGE_ROOT: /app/data/documents
+    volumes:
+      - document_data:/app/data/documents
     depends_on:
       postgres:
         condition: service_healthy
@@ -115,3 +121,4 @@ volumes:
   postgres_data:
   redis_data:
   chroma_data:
+  document_data:

@@ -1,0 +1,54 @@
+name: Backend CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - feat/backend-docker-foundation
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    env:
+      POSTGRES_DB: nyayasetu
+      POSTGRES_USER: nyayasetu
+      POSTGRES_PASSWORD: nyayasetu
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: docker build -q -t nyayasetu-backend-ci backend
+
+      - name: Run backend tests
+        run: docker run --rm nyayasetu-backend-ci python -m pytest -q -p no:cacheprovider
+
+      - name: Validate compose config
+        run: docker compose config
+
+
+  deploy:
+    needs: backend
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Copy docker-compose via SCP
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: 'docker-compose.yml,docker-compose.prod.yml,backend/,worker/,infra/'
+          target: '/opt/nyayasetu'
+      - name: Restart stack on EC2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /opt/nyayasetu
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml down
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+
