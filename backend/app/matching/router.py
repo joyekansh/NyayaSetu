@@ -65,7 +65,6 @@ def list_matches(
 
     return {"matches": matches}
 
-
 def _persist_matches(db: Session, case_id: uuid.UUID, matches: list[dict[str, object]]) -> None:
     from app.models.scheme_match import MatchStatus, SchemeMatch
 
