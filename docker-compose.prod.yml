@@ -1,0 +1,26 @@
+services:
+  postgres:
+    restart: unless-stopped
+
+  redis:
+    restart: unless-stopped
+
+  chroma:
+    restart: unless-stopped
+
+  backend:
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+
+  worker:
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+
+  nginx:
+    restart: unless-stopped
+    ports:
+      - "${NGINX_PORT:-80}:80"
