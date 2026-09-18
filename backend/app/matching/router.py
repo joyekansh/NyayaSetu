@@ -56,7 +56,16 @@ def list_matches(
 
     tier = case.urgency_tier or UrgencyTier.STANDARD
     score = int(case.urgency_score or 0)
-    decision = require_match_access(TriageResult(score=score, tier=tier, signals=()))
+    
+    release = None
+    if case.gate_release_operator and case.gate_release_reason:
+        from app.triage.gate import GateRelease
+        release = GateRelease(
+            operator_id=case.gate_release_operator,
+            reason=case.gate_release_reason
+        )
+        
+    decision = require_match_access(TriageResult(score=score, tier=tier, signals=()), release=release)
     if not decision.allowed:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=decision.reason)
 
@@ -64,7 +73,6 @@ def list_matches(
     _persist_matches(db, case.id, matches)
 
     return {"matches": matches}
-
 
 def _persist_matches(db: Session, case_id: uuid.UUID, matches: list[dict[str, object]]) -> None:
     from app.models.scheme_match import MatchStatus, SchemeMatch

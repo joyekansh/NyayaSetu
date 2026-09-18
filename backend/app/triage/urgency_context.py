@@ -19,6 +19,9 @@ def build_urgency_case_data(
             "criminal_detention_no_counsel_flag",
             "minor_or_dependent_at_risk",
             "repeat_case_escalation",
+            "medical_emergency_flag",
+            "sudden_income_loss_flag",
+            "high_uncertainty_flag",
             "eviction_notice_days_remaining",
         ):
             if key in intake_answers:

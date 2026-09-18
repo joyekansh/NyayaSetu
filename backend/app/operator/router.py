@@ -67,6 +67,8 @@ def release_case(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="case does not require release")
 
     case.status = CaseStatus.IN_REVIEW
+    case.gate_release_operator = str(current_user.id)
+    case.gate_release_reason = body.reason
     AuditEventRepository(db).append(
         case.id,
         "GATE_RELEASED",

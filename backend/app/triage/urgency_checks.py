@@ -62,6 +62,13 @@ class IncomeLossCheck(UrgencyCheck):
         return None
 
 
+class UncertaintyCheck(UrgencyCheck):
+    def evaluate(self, case: CaseUrgencyInput) -> UrgencySignal | None:
+        if case.high_uncertainty_flag:
+            return UrgencySignal(name="HIGH_UNCERTAINTY_PENALTY", weight=20)
+        return None
+
+
 DEFAULT_URGENCY_CHECKS: tuple[UrgencyCheck, ...] = (
     ViolenceCheck(),
     EvictionTimelineCheck(),
@@ -70,4 +77,5 @@ DEFAULT_URGENCY_CHECKS: tuple[UrgencyCheck, ...] = (
     DependentRiskCheck(),
     RepeatEscalationCheck(),
     IncomeLossCheck(),
+    UncertaintyCheck(),
 )
