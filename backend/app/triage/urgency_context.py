@@ -21,6 +21,7 @@ def build_urgency_case_data(
             "repeat_case_escalation",
             "medical_emergency_flag",
             "sudden_income_loss_flag",
+            "high_uncertainty_flag",
             "eviction_notice_days_remaining",
         ):
             if key in intake_answers:
