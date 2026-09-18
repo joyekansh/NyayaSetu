@@ -199,7 +199,7 @@ export default function CaseStatusPage() {
           </h2>
           <ul className="divide-y divide-surface-100">
             {caseData.documents.map((doc) => (
-              <li key={doc.id} className="flex items-center justify-between py-3">
+              <li key={doc.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 py-3 items-start">
                 <div>
                   <p className="text-sm font-medium text-surface-800">
                     {doc.doc_type?.replace(/_/g, ' ') ?? 'Document'}

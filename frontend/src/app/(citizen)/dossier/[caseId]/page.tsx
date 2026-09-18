@@ -134,12 +134,12 @@ export default function CaseDossierPage() {
           <div className="grid gap-5">
             {caseData.matches.map((match) => (
               <div key={match.id} className="card-flat border-l-4 border-l-brand-500 hover:-translate-y-1 transition-transform duration-200">
-                <div className="flex items-start justify-between gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                   <div>
                     <h3 className="font-heading text-lg font-semibold text-surface-900">
                       {match.scheme_name}
                     </h3>
-                    <div className="mt-1 flex items-center gap-2 text-xs font-medium text-surface-500">
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-medium text-surface-500">
                       <span className="bg-surface-100 px-2 py-0.5 rounded-md">
                         Section {match.section_number}
                       </span>
@@ -179,16 +179,16 @@ export default function CaseDossierPage() {
               </li>
             ) : (
               caseData.documents.flatMap((doc) => doc.extracted_fields || []).map((field) => (
-                <li key={field.id} className="py-3 flex items-center justify-between">
+                <li key={field.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-3 items-start">
                   <span className="text-sm font-medium text-surface-600 capitalize">
                     {field.field_name.replace(/_/g, ' ')}
                   </span>
                   <div className="flex items-center gap-3">
-                    <span className="text-sm font-semibold text-surface-900">
+                    <span className="text-sm font-semibold text-surface-900 break-words">
                       {field.field_value}
                     </span>
                     {field.is_operator_corrected && (
-                      <span className="text-[10px] uppercase font-bold text-brand-600 bg-brand-50 px-1.5 py-0.5 rounded">
+                      <span className="text-[10px] uppercase font-bold text-brand-600 bg-brand-50 px-1.5 py-0.5 rounded shrink-0">
                         Edited
                       </span>
                     )}

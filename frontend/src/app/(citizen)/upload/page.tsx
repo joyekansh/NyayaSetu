@@ -269,12 +269,12 @@ export default function CitizenUploadPage() {
           </div>
         )}
 
-        <div className="flex items-center gap-4 pb-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pb-4">
           <button
             type="button"
             onClick={submit}
             disabled={!canSubmit}
-            className="btn-primary"
+            className="btn-primary w-full sm:w-auto"
           >
             {submitting ? (
               <>
@@ -286,7 +286,7 @@ export default function CitizenUploadPage() {
             )}
           </button>
           {progress && (
-            <span className="text-sm font-medium text-brand-600 animate-pulse">
+            <span className="text-sm font-medium text-brand-600 animate-pulse text-center sm:text-left w-full sm:w-auto">
               {progress}
             </span>
           )}
