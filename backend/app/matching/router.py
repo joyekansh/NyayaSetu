@@ -5,8 +5,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db import get_db
+from app.matching.hybrid_matcher import HybridMatcher
+from app.matching.semantic_matcher import SemanticMatcher
+from app.matching.vector_store import ChromaAdapter
 from app.models.case import UrgencyTier
 from app.models.case_record import CaseRecord
+from app.models.document import Document
+from app.models.extracted_field import ExtractedField
 from app.triage.gate import require_match_access
 from app.triage.schemas import TriageResult
 
@@ -18,12 +23,25 @@ class CaseMatcher(Protocol):
         """Return already-guarded, provenance-bearing match cards."""
 
 
-def get_matcher() -> CaseMatcher:
-    def _not_configured(*, case_id: uuid.UUID, case_fields: dict[str, object]) -> list[dict[str, object]]:
-        del case_id, case_fields
-        return []
+def get_matcher(db: Session = Depends(get_db)) -> CaseMatcher:
+    def _match(*, case_id: uuid.UUID, case_fields: dict[str, object]) -> list[dict[str, object]]:
+        # If case_fields is empty, populate from DB
+        if not case_fields:
+            fields = (
+                db.query(ExtractedField)
+                .join(Document)
+                .filter(Document.case_id == case_id)
+                .all()
+            )
+            for f in fields:
+                case_fields[f.field_name] = f.value
 
-    return _not_configured
+        adapter = ChromaAdapter()
+        semantic_matcher = SemanticMatcher(vector_store=adapter)
+        hybrid_matcher = HybridMatcher(semantic_matcher=semantic_matcher)
+        return hybrid_matcher.match(case_fields=case_fields)
+
+    return _match
 
 
 @router.get("/{case_id}/matches")
@@ -43,4 +61,5 @@ def list_matches(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=decision.reason)
 
     return {"matches": matcher(case_id=case.id, case_fields={})}
+
 

@@ -15,6 +15,8 @@ from app.models.base import Base
 from app.models.case_record import CaseRecord
 from app.models.document import Document
 from app.models.user import User, UserRole
+import jwt
+from datetime import datetime, timedelta, timezone
 
 
 @pytest.fixture
@@ -51,7 +53,10 @@ def client(tmp_path) -> tuple[TestClient, sessionmaker[Session], list[str]]:
         user_id = str(user.id)
 
     test_client = TestClient(app)
-    test_client.headers.update({"X-User-Id": user_id})
+    expire = datetime.now(timezone.utc) + timedelta(minutes=15)
+    to_encode = {"sub": user_id, "exp": expire}
+    token = jwt.encode(to_encode, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+    test_client.headers.update({"Authorization": f"Bearer {token}"})
     return test_client, factory, enqueued
 
 

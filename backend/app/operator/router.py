@@ -71,3 +71,54 @@ def release_case(
     db.commit()
     return {"status": case.status.value}
 
+
+class ReferralRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    summary: str = Field(min_length=1)
+    referred_schemes: str = Field(min_length=1)
+
+
+@router.post("/cases/{case_id}/referral")
+def create_referral(
+    case_id: uuid.UUID,
+    body: ReferralRequest,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(require_operator),
+) -> dict[str, str]:
+    from app.models.referral import Referral
+    case = db.get(CaseRecord, case_id)
+    if case is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="case not found")
+    
+    referral = Referral(
+        case_id=case_id,
+        operator_id=str(current_user.id),
+        summary=body.summary,
+        referred_schemes=body.referred_schemes
+    )
+    db.add(referral)
+    case.status = CaseStatus.REFERRED
+    AuditEventRepository(db).append(
+        case.id,
+        "REFERRAL_CREATED",
+        {"operator_id": str(current_user.id), "summary": body.summary, "referred_schemes": body.referred_schemes},
+    )
+    db.commit()
+    return {"status": case.status.value}
+
+
+@router.post('/cases/{case_id}/matches/{clause_id}/approve')
+def approve_match(case_id: uuid.UUID, clause_id: str, db: Session = Depends(get_db), current_user: CurrentUser = Depends(require_operator)) -> dict[str, str]:
+    case = db.get(CaseRecord, case_id)
+    if case is None: raise HTTPException(status_code=404, detail='case not found')
+    AuditEventRepository(db).append(case.id, 'MATCH_APPROVED', {'operator_id': str(current_user.id), 'clause_id': clause_id})
+    db.commit()
+    return {'status': 'approved'}
+
+@router.post('/cases/{case_id}/matches/{clause_id}/reject')
+def reject_match(case_id: uuid.UUID, clause_id: str, db: Session = Depends(get_db), current_user: CurrentUser = Depends(require_operator)) -> dict[str, str]:
+    case = db.get(CaseRecord, case_id)
+    if case is None: raise HTTPException(status_code=404, detail='case not found')
+    AuditEventRepository(db).append(case.id, 'MATCH_REJECTED', {'operator_id': str(current_user.id), 'clause_id': clause_id})
+    db.commit()
+    return {'status': 'rejected'}

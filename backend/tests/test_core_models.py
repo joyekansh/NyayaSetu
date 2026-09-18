@@ -145,3 +145,29 @@ def test_document_rejects_missing_case_relationship(session: Session) -> None:
 
     with pytest.raises(IntegrityError):
         session.commit()
+
+
+def test_scheme_clause_creation(session: Session) -> None:
+    from app.models.scheme_clause import SchemeClause
+
+    clause = SchemeClause(
+        scheme_id="nalsa_free_legal_aid",
+        scheme_name="NALSA Free Legal Aid",
+        clause_id="sec_12_a",
+        title="Scheduled Caste or Scheduled Tribe Eligibility",
+        text="A person who is a member of a Scheduled Caste or Scheduled Tribe...",
+        criteria={"field": "social_category", "operator": "in", "value": ["SC", "ST"]},
+        benefit_description="Free legal services for court proceedings",
+        authority="NALSA",
+        act_reference="Legal Services Authorities Act, 1987 Section 12(a)",
+        is_active=True,
+        version=1,
+    )
+    session.add(clause)
+    session.commit()
+
+    retrieved = session.query(SchemeClause).filter_by(clause_id="sec_12_a").first()
+    assert retrieved is not None
+    assert retrieved.scheme_id == "nalsa_free_legal_aid"
+    assert retrieved.criteria["operator"] == "in"
+

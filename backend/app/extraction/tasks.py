@@ -130,7 +130,7 @@ class DocumentExtractionProcessor:
 
 def _default_processor_factory(session: Session) -> DocumentExtractionProcessor:
     from app.config import get_settings
-    from app.extraction.ocr_engine import FakeOcrStrategy
+    from app.extraction.ocr_engine import TesseractOcrStrategy
     from app.intake.storage import LocalDocumentStorage
 
     settings = get_settings()
@@ -138,7 +138,7 @@ def _default_processor_factory(session: Session) -> DocumentExtractionProcessor:
     return DocumentExtractionProcessor(
         session=session,
         storage=LocalDocumentStorage(storage_root),
-        ocr=FakeOcrStrategy(),
+        ocr=TesseractOcrStrategy(),
     )
 
 

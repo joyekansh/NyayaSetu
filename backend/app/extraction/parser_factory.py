@@ -1,3 +1,4 @@
+from app.extraction.parsers.aadhaar import AadhaarParser
 from app.extraction.parsers.base import DocumentParser
 from app.extraction.parsers.eviction_notice import EvictionNoticeParser
 from app.extraction.parsers.income_cert import IncomeCertificateParser
@@ -20,5 +21,8 @@ def parser_for(document_type: object) -> DocumentParser:
         return IncomeCertificateParser()
     if normalized == DocumentType.EVICTION_NOTICE.value:
         return EvictionNoticeParser()
+    if normalized == DocumentType.AADHAAR.value:
+        return AadhaarParser()
     raise UnsupportedDocumentTypeError("unsupported document type")
+
 

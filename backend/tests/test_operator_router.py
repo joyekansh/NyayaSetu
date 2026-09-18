@@ -11,6 +11,8 @@ from app.models.base import Base
 from app.models.case import CaseStatus, UrgencyTier
 from app.models.case_record import CaseRecord
 from app.models.user import User, UserRole
+import jwt
+from datetime import datetime, timedelta, timezone
 
 
 def _client() -> tuple[TestClient, sessionmaker[Session], User, User]:
@@ -37,10 +39,17 @@ def _client() -> tuple[TestClient, sessionmaker[Session], User, User]:
     app.dependency_overrides[get_db] = override_db
     return TestClient(app), factory, citizen, caseworker
 
+def _auth_header(user: User, settings: Settings) -> dict[str, str]:
+    expire = datetime.now(timezone.utc) + timedelta(minutes=15)
+    to_encode = {"sub": str(user.id), "exp": expire}
+    token = jwt.encode(to_encode, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+    return {"Authorization": f"Bearer {token}"}
+
 
 def test_operator_queue_requires_caseworker_role() -> None:
     client, _, citizen, _ = _client()
-    response = client.get("/api/v1/operator/queue", headers={"X-User-Id": str(citizen.id)})
+    settings = Settings()
+    response = client.get("/api/v1/operator/queue", headers=_auth_header(citizen, settings))
     assert response.status_code == 403
 
 
@@ -53,7 +62,7 @@ def test_operator_queue_returns_high_risk_cases() -> None:
         session.commit()
         urgent_id = str(urgent.id)
 
-    response = client.get("/api/v1/operator/queue", headers={"X-User-Id": str(caseworker.id)})
+    response = client.get("/api/v1/operator/queue", headers=_auth_header(caseworker, Settings()))
 
     assert response.status_code == 200
     assert [item["id"] for item in response.json()["cases"]] == [urgent_id]
@@ -70,7 +79,7 @@ def test_operator_release_moves_case_to_review_and_audits() -> None:
     response = client.post(
         f"/api/v1/operator/cases/{case_id}/release",
         json={"reason": "Reviewed urgency evidence"},
-        headers={"X-User-Id": str(caseworker.id)},
+        headers=_auth_header(caseworker, Settings()),
     )
 
     assert response.status_code == 200
