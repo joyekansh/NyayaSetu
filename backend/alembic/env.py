@@ -7,6 +7,9 @@ from app.config import get_settings
 from app.models.audit_event import AuditEvent  # noqa: F401
 from app.models.base import Base
 from app.models.case_record import CaseRecord  # noqa: F401
+from app.models.document import Document  # noqa: F401
+from app.models.extracted_field import ExtractedField  # noqa: F401
+from app.models.user import User  # noqa: F401
 
 
 config = context.config
