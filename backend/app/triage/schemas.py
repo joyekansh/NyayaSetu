@@ -25,6 +25,7 @@ class CaseUrgencyInput:
     repeat_case_escalation: bool = False
     medical_emergency_flag: bool = False
     sudden_income_loss_flag: bool = False
+    high_uncertainty_flag: bool = False
 
     @classmethod
     def from_data(cls, data: object) -> "CaseUrgencyInput":
@@ -45,6 +46,7 @@ class CaseUrgencyInput:
             repeat_case_escalation=_strict_true(data.get("repeat_case_escalation")),
             medical_emergency_flag=_strict_true(data.get("medical_emergency_flag")),
             sudden_income_loss_flag=_strict_true(data.get("sudden_income_loss_flag")),
+            high_uncertainty_flag=_strict_true(data.get("high_uncertainty_flag")),
         )
 
 

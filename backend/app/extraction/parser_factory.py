@@ -23,6 +23,7 @@ def parser_for(document_type: object) -> DocumentParser:
         return EvictionNoticeParser()
     if normalized == DocumentType.AADHAAR.value:
         return AadhaarParser()
+
     raise UnsupportedDocumentTypeError("unsupported document type")
 
 

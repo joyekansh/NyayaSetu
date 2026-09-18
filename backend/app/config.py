@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     jwt_secret_key: str = "supersecretkey"  # Override in production via env
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24 * 7 # 1 week
+    gemini_api_key: str = ""  # Set via GEMINI_API_KEY env var or .env
+    gemini_model: str = "gemini-2.0-flash"
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 

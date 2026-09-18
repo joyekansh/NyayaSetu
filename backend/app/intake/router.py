@@ -71,7 +71,7 @@ def create_case(
 ) -> CaseSummaryResponse:
     if not body.consent_given:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="consent required")
-    case = CaseRecord(language=body.language)
+    case = CaseRecord(language=body.language, intake_answers=body.intake_answers)
     db.add(case)
     db.commit()
     db.refresh(case)

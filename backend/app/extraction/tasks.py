@@ -72,6 +72,9 @@ class DocumentExtractionProcessor:
             {"document_id": str(document.id), "document_type": document.document_type.value},
         )
 
+        extracted = {}
+        extraction_error: Exception | None = None
+        extraction_failed = False
         try:
             raw_bytes = self._storage.load(storage_key=document.storage_key)
             
@@ -105,24 +108,10 @@ class DocumentExtractionProcessor:
                     "field_names": [field.name for field in parsed.fields],
                 },
             )
-
             extracted = {field.name: field.value for field in parsed.fields}
-            triage_input = build_urgency_case_data(extracted, reference_date=self._reference_date)
-            triage = score_case(triage_input)
-            case.urgency_score = float(triage.score)
-            case.urgency_tier = triage.tier
-            case.status = CaseStatus.TRIAGED
-            self._session.flush()
-            self._audit.append(
-                case.id,
-                "URGENCY_SCORED",
-                {
-                    "score": triage.score,
-                    "tier": triage.tier.value,
-                    "signals": [{"name": signal.name, "weight": signal.weight} for signal in triage.signals],
-                },
-            )
         except Exception as error:
+            extraction_failed = True
+            extraction_error = error
             document.ocr_status = transition_ocr_status(document.ocr_status, OcrStatus.FAILED)
             disposition = classify_processing_error(error)
             self._audit.append(
@@ -134,7 +123,41 @@ class DocumentExtractionProcessor:
                     "disposition": disposition.value,
                 },
             )
-            raise
+
+        # --- Graceful Degradation: Always run triage scoring ---
+        intake_answers = case.intake_answers or {}
+        grievance_text = str(intake_answers.get('grievance_type', ''))
+        description_text = str(intake_answers.get('description', ''))
+        full_grievance = f"{description_text}\n{grievance_text}".strip()
+        
+        from app.extraction.llm_orchestrator import analyse_grievance
+        analysis = analyse_grievance(full_grievance)
+        
+        flags = analysis.to_urgency_dict()
+        if extraction_failed:
+            flags["high_uncertainty_flag"] = True
+            
+        triage_input = build_urgency_case_data(
+            extracted, 
+            intake_answers=flags, 
+            reference_date=self._reference_date
+        )
+        triage = score_case(triage_input)
+        case.urgency_score = float(triage.score)
+        case.urgency_tier = triage.tier
+        case.status = CaseStatus.TRIAGED
+        self._session.flush()
+        self._audit.append(
+            case.id,
+            "URGENCY_SCORED",
+            {
+                "score": triage.score,
+                "tier": triage.tier.value,
+                "signals": [{"name": signal.name, "weight": signal.weight} for signal in triage.signals],
+            },
+        )
+        if extraction_error is not None:
+            raise extraction_error
 
 
 def _default_processor_factory(session: Session) -> DocumentExtractionProcessor:
