@@ -1,0 +1,43 @@
+{
+  "pages": {
+    "/_not-found/page": [
+      "static/chunks/webpack-23dea8760e03e98b.js",
+      "static/chunks/4bd1b696-fd4c7e7db1108dbc.js",
+      "static/chunks/517-64eaf24f06697c85.js",
+      "static/chunks/main-app-284c8b41fa426c78.js",
+      "static/chunks/app/_not-found/page-f1320cc644d2d111.js"
+    ],
+    "/layout": [
+      "static/chunks/webpack-23dea8760e03e98b.js",
+      "static/chunks/4bd1b696-fd4c7e7db1108dbc.js",
+      "static/chunks/517-64eaf24f06697c85.js",
+      "static/chunks/main-app-284c8b41fa426c78.js",
+      "static/css/74fefcd320c8cd5a.css",
+      "static/chunks/173-c1e7069b2846e68b.js",
+      "static/chunks/app/layout-a986cef0560f0762.js"
+    ],
+    "/(citizen)/status/[caseId]/page": [
+      "static/chunks/webpack-23dea8760e03e98b.js",
+      "static/chunks/4bd1b696-fd4c7e7db1108dbc.js",
+      "static/chunks/517-64eaf24f06697c85.js",
+      "static/chunks/main-app-284c8b41fa426c78.js",
+      "static/chunks/173-c1e7069b2846e68b.js",
+      "static/chunks/app/(citizen)/status/[caseId]/page-1b9f48d9ef649305.js"
+    ],
+    "/(citizen)/upload/page": [
+      "static/chunks/webpack-23dea8760e03e98b.js",
+      "static/chunks/4bd1b696-fd4c7e7db1108dbc.js",
+      "static/chunks/517-64eaf24f06697c85.js",
+      "static/chunks/main-app-284c8b41fa426c78.js",
+      "static/chunks/app/(citizen)/upload/page-7abb1efdc89a39ba.js"
+    ],
+    "/(citizen)/dossier/[caseId]/page": [
+      "static/chunks/webpack-23dea8760e03e98b.js",
+      "static/chunks/4bd1b696-fd4c7e7db1108dbc.js",
+      "static/chunks/517-64eaf24f06697c85.js",
+      "static/chunks/main-app-284c8b41fa426c78.js",
+      "static/chunks/173-c1e7069b2846e68b.js",
+      "static/chunks/app/(citizen)/dossier/[caseId]/page-f4039d0409a877f6.js"
+    ]
+  }
+}
