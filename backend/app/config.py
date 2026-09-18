@@ -9,8 +9,13 @@ class Settings(BaseSettings):
     environment: str = "development"
     database_url: str = "postgresql+psycopg://nyayasetu:nyayasetu@postgres:5432/nyayasetu"
     redis_url: str = "redis://redis:6379/0"
-    cors_origins: list[str] = []
-
+    document_storage_root: str = "/tmp/nyayasetu-documents"
+    chroma_host: str = "chroma"
+    chroma_port: int = 8000
+    cors_origins: list[str] = ["http://localhost:3000", "http://localhost:8080"]
+    jwt_secret_key: str = "supersecretkey"  # Override in production via env
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 60 * 24 * 7 # 1 week
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
