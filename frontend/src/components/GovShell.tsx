@@ -231,15 +231,15 @@ function GovNav({ lang }: { lang: 'en' | 'hi' }) {
 /* Quick Service Tiles (homepage grid)                                  */
 /* ------------------------------------------------------------------ */
 const SERVICES = [
-  { icon: '📄', title: 'File Legal Aid Request', titleHi: 'विधिक सहायता हेतु आवेदन', desc: 'Submit documents & get scheme matches', href: '/upload', color: 'gov-tile--blue' },
-  { icon: '🔍', title: 'Track Your Case', titleHi: 'केस की स्थिति जांचें', desc: 'Check real-time status of your request', href: '/status', color: 'gov-tile--green' },
-  { icon: '⚖️', title: 'Know Your Rights', titleHi: 'अपने अधिकार जानें', desc: 'Browse legal schemes & eligibility', href: '#schemes', color: 'gov-tile--orange' },
-  { icon: '🏛️', title: 'Find DLSA Office', titleHi: 'DLSA कार्यालय खोजें', desc: 'Locate your district legal services authority', href: '#contact', color: 'gov-tile--purple' },
-  { icon: '📞', title: 'Legal Aid Helpline', titleHi: 'विधिक सहायता हेल्पलाइन', desc: 'Call 15100 — free legal aid helpline', href: 'tel:15100', color: 'gov-tile--red' },
-  { icon: '📋', title: 'Download Forms', titleHi: 'फॉर्म डाउनलोड करें', desc: 'Official forms in PDF/Hindi/English', href: '#forms', color: 'gov-tile--teal' },
+  { icon: '', title: 'File Legal Aid Request', titleHi: 'विधिक सहायता हेतु आवेदन', desc: 'Submit documents & get scheme matches', href: '/upload', color: 'gov-tile--blue' },
+  { icon: '', title: 'Track Your Case', titleHi: 'केस की स्थिति जांचें', desc: 'Check real-time status of your request', href: '/status', color: 'gov-tile--green' },
+  { icon: '', title: 'Know Your Rights', titleHi: 'अपने अधिकार जानें', desc: 'Browse legal schemes & eligibility', href: '#schemes', color: 'gov-tile--orange' },
+  { icon: '', title: 'Find DLSA Office', titleHi: 'DLSA कार्यालय खोजें', desc: 'Locate your district legal services authority', href: '#contact', color: 'gov-tile--purple' },
+  { icon: '', title: 'Legal Aid Helpline', titleHi: 'विधिक सहायता हेल्पलाइन', desc: 'Call 15100 — free legal aid helpline', href: 'tel:15100', color: 'gov-tile--red' },
+  { icon: '', title: 'Download Forms', titleHi: 'फॉर्म डाउनलोड करें', desc: 'Official forms in PDF/Hindi/English', href: '#forms', color: 'gov-tile--teal' },
 ];
 
-function ServiceTiles({ lang }: { lang: 'en' | 'hi' }) {
+export function ServiceTiles({ lang }: { lang: 'en' | 'hi' }) {
   return (
     <section className="gov-services" aria-labelledby="services-heading">
       <div className="gov-services__header">
@@ -261,7 +261,7 @@ function ServiceTiles({ lang }: { lang: 'en' | 'hi' }) {
             className={`gov-tile ${svc.color}`}
             aria-label={lang === 'hi' ? svc.titleHi : svc.title}
           >
-            <div className="gov-tile__icon" aria-hidden="true">{svc.icon}</div>
+            {svc.icon && <div className="gov-tile__icon" aria-hidden="true">{svc.icon}</div>}
             <div className="gov-tile__body">
               <h3 className="gov-tile__title">
                 {lang === 'hi' ? svc.titleHi : svc.title}
@@ -317,7 +317,7 @@ function GovFooter({ lang }: { lang: 'en' | 'hi' }) {
 /* ------------------------------------------------------------------ */
 /* Root Shell — wires everything together                               */
 /* ------------------------------------------------------------------ */
-export default function GovShell({ children, showTiles = false }: { children: React.ReactNode; showTiles?: boolean }) {
+export default function GovShell({ children }: { children: React.ReactNode }) {
   const [fontSize, setFontSize] = useState<'sm' | 'md' | 'lg'>('md');
   const [contrast, setContrast] = useState(false);
   const [lang, setLang] = useState<'en' | 'hi'>('en');
@@ -349,7 +349,6 @@ export default function GovShell({ children, showTiles = false }: { children: Re
       <GovNav lang={lang} />
 
       <main id="main-content" className="gov-main" tabIndex={-1}>
-        {showTiles && <ServiceTiles lang={lang} />}
         {children}
       </main>
 
