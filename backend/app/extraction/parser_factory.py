@@ -17,8 +17,13 @@ def parser_for(document_type: object) -> DocumentParser:
     else:
         raise UnsupportedDocumentTypeError("unsupported document type")
 
-    # Use the robust LLM parser for all types instead of fragile regex
-    from app.extraction.parsers.llm_parser import LLMDocumentParser
-    return LLMDocumentParser(document_type=normalized)
+    if normalized == DocumentType.INCOME_CERTIFICATE.value:
+        return IncomeCertificateParser()
+    if normalized == DocumentType.EVICTION_NOTICE.value:
+        return EvictionNoticeParser()
+    if normalized == DocumentType.AADHAAR.value:
+        return AadhaarParser()
+
+    raise UnsupportedDocumentTypeError("unsupported document type")
 
 

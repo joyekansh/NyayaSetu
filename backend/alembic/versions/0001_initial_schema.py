@@ -107,6 +107,7 @@ def upgrade() -> None:
                 "AADHAAR",
                 "INCOME_CERTIFICATE",
                 "EVICTION_NOTICE",
+                "SPEECH_RECORDING",
                 "OTHER",
                 name="document_type",
                 native_enum=False,
@@ -140,10 +141,9 @@ def upgrade() -> None:
     )
     op.create_index("ix_documents_case_id", "documents", ["case_id"], unique=False)
     op.create_index("ix_documents_uploaded_by_user_id", "documents", ["uploaded_by_user_id"], unique=False)
-    
-    # Ensure audit_events is append-only
-    bind = op.get_bind()
-    if bind.engine.name == 'postgresql':
+
+    if op.get_bind().dialect.name == "postgresql":
+        # Ensure audit_events is append-only at the database boundary.
         op.execute(
             """
             CREATE OR REPLACE FUNCTION prevent_audit_update_delete()
@@ -226,6 +226,9 @@ def downgrade() -> None:
     op.drop_table("documents")
     op.drop_table("users")
     op.drop_index("ix_audit_events_case_sequence", table_name="audit_events")
+    if op.get_bind().dialect.name == "postgresql":
+        op.execute("DROP TRIGGER IF EXISTS trg_audit_append_only ON audit_events")
+        op.execute("DROP FUNCTION IF EXISTS prevent_audit_update_delete()")
     op.drop_table("audit_events")
     op.drop_table("cases")
 

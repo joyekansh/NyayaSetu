@@ -109,3 +109,52 @@ def test_extraction_failure_marks_document_failed_and_audits() -> None:
     assert "EXTRACTION_FAILED" in [
         event.event_type for event in session.scalars(select(AuditEvent).order_by(AuditEvent.sequence))
     ]
+
+def test_speech_recording_routes_to_gemini_and_skips_ocr(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.extraction.tasks import DocumentExtractionProcessor
+    from app.intake.schemas import DocumentUploadInput
+    from app.intake.service import IntakeService
+    from app.extraction.schemas import ParsedDocument, NormalizedField
+
+    session = _session()
+    user = User(email="citizen3@example.test", display_name="Citizen", role=UserRole.CITIZEN)
+    session.add(user)
+    session.flush()
+    storage = MemoryStorage()
+    upload = DocumentUploadInput(
+        filename="speech.mp3",
+        content=b"ID3fake audio data",
+        document_type=DocumentType.SPEECH_RECORDING,
+        uploaded_by_user_id=user.id,
+    )
+    case, document = IntakeService(session=session, storage=storage).create_case_with_document(upload=upload)
+    session.commit()
+
+    class FakeGeminiParser:
+        def parse_audio(self, raw_bytes: bytes, mime_type: str | None = None) -> ParsedDocument:
+            assert raw_bytes == b"ID3fake audio data"
+            return ParsedDocument(document_type="SPEECH_RECORDING", fields=(
+                NormalizedField(name="Summary", value="User needs help", confidence=0.9),
+                NormalizedField(name="Intent", value="Legal Help", confidence=0.9),
+            ))
+
+    import app.extraction.parsers.gemini_audio_parser
+    monkeypatch.setattr(app.extraction.parsers.gemini_audio_parser, "GeminiAudioParser", lambda: FakeGeminiParser())
+
+    class CrashingOcrStrategy:
+        def extract_text(self, document_bytes: bytes) -> str:
+            raise RuntimeError("OCR should not be called for audio")
+
+    DocumentExtractionProcessor(
+        session=session,
+        storage=storage,
+        ocr=CrashingOcrStrategy(),
+        reference_date=date(2026, 2, 1),
+    ).process(document.id)
+    session.commit()
+
+    refreshed = session.get(Document, document.id)
+    assert refreshed is not None
+    assert refreshed.ocr_status is OcrStatus.COMPLETED
+    fields = session.scalars(select(ExtractedField).where(ExtractedField.document_id == document.id)).all()
+    assert {field.field_name for field in fields} == {"Summary", "Intent"}

@@ -12,11 +12,14 @@ SUPPORTED_SIGNATURES = (
     ("application/pdf", b"%PDF-"),
     ("image/png", b"\x89PNG\r\n\x1a\n"),
     ("image/jpeg", b"\xff\xd8\xff"),
+    ("audio/mpeg", b"ID3"),
+    ("audio/mpeg", b"\xff\xfb"),
 )
 EXTENSIONS_BY_CONTENT_TYPE = {
     "application/pdf": {".pdf"},
     "image/png": {".png"},
     "image/jpeg": {".jpg", ".jpeg"},
+    "audio/mpeg": {".mp3"},
 }
 SAFE_FILENAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._ -]{0,254}$")
 

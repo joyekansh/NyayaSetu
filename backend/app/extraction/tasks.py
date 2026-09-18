@@ -73,11 +73,21 @@ class DocumentExtractionProcessor:
         )
 
         extracted = {}
+        extraction_error: Exception | None = None
         extraction_failed = False
         try:
             raw_bytes = self._storage.load(storage_key=document.storage_key)
-            text = self._ocr.extract_text(raw_bytes)
-            parsed = parser_for(document.document_type).parse(text)
+            
+            from app.models.document import DocumentType
+            if document.document_type == DocumentType.SPEECH_RECORDING:
+                from app.extraction.parsers.gemini_audio_parser import GeminiAudioParser
+                # We instantiate lazily so we don't need GEMINI_API_KEY for tests if unused
+                parser = GeminiAudioParser()
+                parsed = parser.parse_audio(raw_bytes, document.content_type)
+            else:
+                text = self._ocr.extract_text(raw_bytes)
+                parsed = parser_for(document.document_type).parse(text)
+                
             for field in parsed.fields:
                 self._session.add(
                     ExtractedField(
@@ -101,6 +111,7 @@ class DocumentExtractionProcessor:
             extracted = {field.name: field.value for field in parsed.fields}
         except Exception as error:
             extraction_failed = True
+            extraction_error = error
             document.ocr_status = transition_ocr_status(document.ocr_status, OcrStatus.FAILED)
             disposition = classify_processing_error(error)
             self._audit.append(
@@ -114,8 +125,9 @@ class DocumentExtractionProcessor:
             )
 
         # --- Graceful Degradation: Always run triage scoring ---
-        grievance_text = str(case.intake_answers.get('grievance_type', ''))
-        description_text = str(case.intake_answers.get('description', ''))
+        intake_answers = case.intake_answers or {}
+        grievance_text = str(intake_answers.get('grievance_type', ''))
+        description_text = str(intake_answers.get('description', ''))
         full_grievance = f"{description_text}\n{grievance_text}".strip()
         
         from app.extraction.llm_orchestrator import analyse_grievance
@@ -144,6 +156,8 @@ class DocumentExtractionProcessor:
                 "signals": [{"name": signal.name, "weight": signal.weight} for signal in triage.signals],
             },
         )
+        if extraction_error is not None:
+            raise extraction_error
 
 
 def _default_processor_factory(session: Session) -> DocumentExtractionProcessor:

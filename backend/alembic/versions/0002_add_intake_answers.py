@@ -1,7 +1,7 @@
 """Add intake_answers to cases
 
 Revision ID: 0002
-Revises: 0001
+Revises: e26c912cd2ab
 Create Date: 2026-09-19 00:25:00.000000
 
 """
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = '0002'
-down_revision: Union[str, None] = '0001'
+down_revision: Union[str, None] = 'e26c912cd2ab'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
