@@ -1,12 +1,12 @@
 'use client';
 
 /**
- * (citizen)/upload — FR-1..FR-4. Consent → intake questions → document capture.
+ * (citizen)/upload — FR-1..FR-4.
+ * New step order: Situation → Documents → Grievance → Consent
  * OWNER: Akash.
  *
- * The case row is created first so every subsequent upload has a case_id to
- * attach to, and so a half-finished kiosk session is still recoverable by an
- * operator rather than lost.
+ * No doc-type dropdown — the backend OCR auto-identifies the document.
+ * Speech input (Hindi + English) will be wired in the next sprint.
  */
 
 import { useRouter } from 'next/navigation';
@@ -15,52 +15,53 @@ import CameraCapture from '@/components/CameraCapture';
 import { HttpError } from '@/lib/httpClient';
 import { citizenCaseApi } from '@/lib/citizenCaseApi';
 import { documentApi } from '@/lib/documentApi';
-import type { CaseSummary, DocType, Language } from '@/types/api';
-
-const DOC_TYPES: { value: DocType; label: string; icon: string }[] = [
-  { value: 'income_cert', label: 'Income certificate', icon: '📄' },
-  { value: 'eviction_notice', label: 'Eviction notice', icon: '🏠' },
-  { value: 'aadhaar', label: 'Aadhaar card', icon: '🪪' },
-  { value: 'fir', label: 'FIR copy', icon: '📋' },
-  { value: 'wage_slip', label: 'Wage slip', icon: '💰' },
-  { value: 'medical_report', label: 'Medical report', icon: '🏥' },
-];
+import type { CaseSummary, Language } from '@/types/api';
 
 const GRIEVANCE_OPTIONS = [
-  'Eviction or housing',
-  'Unpaid wages',
-  'Domestic violence',
-  'Police or detention',
-  'Compensation claim',
-  'Something else',
+  { value: 'Eviction or housing', icon: '🏠', desc: 'Notice to leave, illegal eviction' },
+  { value: 'Unpaid wages', icon: '💰', desc: 'Withheld salary or dues' },
+  { value: 'Domestic violence', icon: '🛡️', desc: 'Threats, abuse, or harassment at home' },
+  { value: 'Police or detention', icon: '⚖️', desc: 'Arrest, detention, or FIR matter' },
+  { value: 'Compensation claim', icon: '📋', desc: 'Accident, medical, or employer claim' },
+  { value: 'Something else', icon: '💬', desc: 'Any other legal problem' },
 ];
 
 interface Staged {
   file: Blob;
   previewUrl: string;
-  docType: DocType;
   uploadedId?: string;
 }
 
 export default function CitizenUploadPage() {
   const router = useRouter();
 
-  const [consent, setConsent] = useState(false);
+  // Step state
+  const [step, setStep] = useState(1);
+
+  // Step 1 — Situation
   const [district, setDistrict] = useState('');
   const [language, setLanguage] = useState<Language>('en');
-  const [grievance, setGrievance] = useState(GRIEVANCE_OPTIONS[0]);
-  const [description, setDescription] = useState('');
   const [monthlyIncome, setMonthlyIncome] = useState('');
+  const [description, setDescription] = useState('');
 
-  const [docType, setDocType] = useState<DocType>('income_cert');
+  // Step 2 — Documents
   const [staged, setStaged] = useState<Staged[]>([]);
 
+  // Step 3 — Grievance
+  const [grievance, setGrievance] = useState(GRIEVANCE_OPTIONS[0].value);
+
+  // Step 4 — Consent
+  const [consent, setConsent] = useState(false);
+
+  // Submission
   const [submitting, setSubmitting] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const canSubmit =
-    consent && district.trim() !== '' && staged.length > 0 && !submitting;
+  const step1Valid = district.trim() !== '';
+  const step2Valid = staged.length > 0;
+  const step3Valid = grievance !== '';
+  const canSubmit = consent && !submitting;
 
   async function submit() {
     setSubmitting(true);
@@ -85,8 +86,8 @@ export default function CitizenUploadPage() {
         await documentApi.upload({
           caseId: created.id,
           file: item.file,
-          docType: item.docType,
-          filename: `${item.docType}.jpg`,
+          // No docType — backend OCR will auto-identify
+          filename: `document_${i + 1}.jpg`,
         });
       }
 
@@ -103,63 +104,86 @@ export default function CitizenUploadPage() {
   }
 
   return (
-    <div className="animate-slide-up">
-      {/* Hero section */}
+    <div className="animate-slide-up max-w-2xl mx-auto">
+      {/* Hero */}
       <div className="mb-8">
         <h1 className="font-heading text-3xl font-bold text-surface-900 sm:text-4xl">
-          Start a legal aid request
+          Get legal help
         </h1>
         <p className="mt-3 max-w-prose text-base text-surface-500 leading-relaxed">
-          Answer a few questions and add photos of your documents. A legal aid
-          worker reviews every request before any result is issued.
+          Answer a few questions and take photos of your documents. A legal aid worker
+          reviews every request before any result is shared.
         </p>
       </div>
 
-      {/* Intake form */}
-      <div className="space-y-8">
-        {/* ---- Section: About your situation ---- */}
-        <section className="card-flat space-y-5">
-          <div className="flex items-center gap-3 mb-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-100 text-brand-600 text-sm font-bold">1</span>
-            <h2 className="font-heading text-lg font-semibold text-surface-900">About your situation</h2>
+      {/* Step Indicator */}
+      <div className="flex items-center gap-0 mb-8">
+        {[
+          { n: 1, label: 'Situation' },
+          { n: 2, label: 'Documents' },
+          { n: 3, label: 'Grievance' },
+          { n: 4, label: 'Consent' },
+        ].map(({ n, label }, idx, arr) => (
+          <div key={n} className="flex items-center flex-1">
+            <button
+              type="button"
+              onClick={() => step > n && setStep(n)}
+              className={`flex flex-col items-center gap-1 min-w-[56px] focus:outline-none ${
+                step > n ? 'cursor-pointer' : 'cursor-default'
+              }`}
+              aria-label={`Step ${n}: ${label}`}
+            >
+              <span
+                className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold transition-all duration-300 ${
+                  step === n
+                    ? 'bg-brand-600 text-white shadow-glow scale-110'
+                    : step > n
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-surface-100 text-surface-400'
+                }`}
+              >
+                {step > n ? '✓' : n}
+              </span>
+              <span
+                className={`text-[11px] font-medium hidden sm:block ${
+                  step === n ? 'text-brand-600' : 'text-surface-400'
+                }`}
+              >
+                {label}
+              </span>
+            </button>
+            {idx < arr.length - 1 && (
+              <div
+                className={`flex-1 h-0.5 mx-1 transition-colors duration-500 ${
+                  step > n ? 'bg-emerald-400' : 'bg-surface-200'
+                }`}
+              />
+            )}
           </div>
+        ))}
+      </div>
 
-          <Field label="District">
+      {/* ---- STEP 1: Situation ---- */}
+      {step === 1 && (
+        <section className="card-flat space-y-5 animate-slide-up">
+          <StepHeader n={1} icon="📍" title="About your situation" />
+
+          <Field label="District" required>
             <input
+              id="district"
               value={district}
               onChange={(e) => setDistrict(e.target.value)}
               placeholder="e.g. Vellore"
               className="input-field"
-            />
-          </Field>
-
-          <Field label="What do you need help with?">
-            <select
-              value={grievance}
-              onChange={(e) => setGrievance(e.target.value)}
-              className="input-field"
-            >
-              {GRIEVANCE_OPTIONS.map((o) => (
-                <option key={o} value={o}>
-                  {o}
-                </option>
-              ))}
-            </select>
-          </Field>
-
-          <Field label="Describe what happened">
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={4}
-              placeholder="Include dates and anything urgent, such as a deadline on a notice."
-              className="input-field resize-none"
+              autoFocus
+              aria-required="true"
             />
           </Field>
 
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <Field label="Monthly household income (₹)">
               <input
+                id="monthly-income"
                 inputMode="numeric"
                 value={monthlyIncome}
                 onChange={(e) => setMonthlyIncome(e.target.value)}
@@ -168,8 +192,9 @@ export default function CitizenUploadPage() {
               />
             </Field>
 
-            <Field label="Language">
+            <Field label="Preferred language">
               <select
+                id="language"
                 value={language}
                 onChange={(e) => setLanguage(e.target.value as Language)}
                 className="input-field"
@@ -179,118 +204,278 @@ export default function CitizenUploadPage() {
               </select>
             </Field>
           </div>
-        </section>
 
-        {/* ---- Section: Documents ---- */}
-        <section className="card-flat space-y-5">
-          <div className="flex items-center gap-3 mb-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-100 text-brand-600 text-sm font-bold">2</span>
-            <h2 className="font-heading text-lg font-semibold text-surface-900">Your documents</h2>
-          </div>
-
-          <Field label="What is this document?">
-            <select
-              value={docType}
-              onChange={(e) => setDocType(e.target.value as DocType)}
-              className="input-field"
-            >
-              {DOC_TYPES.map((d) => (
-                <option key={d.value} value={d.value}>
-                  {d.icon} {d.label}
-                </option>
-              ))}
-            </select>
+          <Field label="Describe what happened">
+            <textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={4}
+              placeholder="Include dates and anything urgent, such as a deadline on a notice."
+              className="input-field resize-none"
+            />
           </Field>
+
+          <div className="flex justify-end pt-2">
+            <button
+              type="button"
+              onClick={() => setStep(2)}
+              disabled={!step1Valid}
+              className="btn-primary"
+            >
+              Next — Add Documents →
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* ---- STEP 2: Documents ---- */}
+      {step === 2 && (
+        <section className="card-flat space-y-5 animate-slide-up">
+          <StepHeader n={2} icon="📷" title="Take pictures of your documents" />
+
+          <p className="text-sm text-surface-500 leading-relaxed -mt-1">
+            Take a clear photo of each document — income certificates, eviction notices,
+            Aadhaar, wage slips, or any other paperwork. Our system will{' '}
+            <strong>automatically identify</strong> what each document is.
+          </p>
 
           <CameraCapture
             disabled={submitting}
             onCapture={(file, previewUrl) =>
-              setStaged((prev) => [...prev, { file, previewUrl, docType }])
+              setStaged((prev) => [...prev, { file, previewUrl }])
             }
           />
 
           {staged.length > 0 && (
-            <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-              {staged.map((item, i) => (
-                <li
-                  key={item.previewUrl}
-                  className="group relative overflow-hidden rounded-xl border border-surface-200 bg-surface-50 animate-slide-up"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={item.previewUrl}
-                    alt={`${item.docType} preview`}
-                    className="h-32 w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                  <div className="flex items-center justify-between px-3 py-2 text-xs">
-                    <span className="font-medium text-surface-700">{labelFor(item.docType)}</span>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setStaged((prev) => prev.filter((_, idx) => idx !== i))
-                      }
-                      className="text-danger font-medium hover:underline"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <>
+              <p className="text-xs font-semibold text-surface-400 uppercase tracking-wider">
+                {staged.length} document{staged.length > 1 ? 's' : ''} added
+              </p>
+              <ul
+                className="grid grid-cols-2 gap-4 sm:grid-cols-3"
+                aria-label="Document previews"
+              >
+                {staged.map((item, i) => (
+                  <li
+                    key={item.previewUrl}
+                    className="group relative overflow-hidden rounded-xl border border-surface-200 bg-surface-50 animate-slide-up"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={item.previewUrl}
+                      alt={`Document ${i + 1} preview`}
+                      className="h-36 w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                    <div className="flex items-center justify-between px-3 py-2 text-xs bg-white">
+                      <span className="font-medium text-surface-600">
+                        Document {i + 1}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setStaged((prev) => prev.filter((_, idx) => idx !== i))
+                        }
+                        className="text-danger font-medium hover:underline"
+                        aria-label={`Remove document ${i + 1}`}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
-        </section>
 
-        {/* ---- Section: Consent ---- */}
-        <section className="card-flat">
-          <div className="flex items-center gap-3 mb-4">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-100 text-brand-600 text-sm font-bold">3</span>
-            <h2 className="font-heading text-lg font-semibold text-surface-900">Consent</h2>
+          <div className="flex justify-between pt-2">
+            <button
+              type="button"
+              onClick={() => setStep(1)}
+              className="btn-secondary"
+            >
+              ← Back
+            </button>
+            <button
+              type="button"
+              onClick={() => setStep(3)}
+              disabled={!step2Valid}
+              className="btn-primary"
+            >
+              Next — Your Problem →
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* ---- STEP 3: Grievance ---- */}
+      {step === 3 && (
+        <section className="card-flat space-y-5 animate-slide-up">
+          <StepHeader n={3} icon="⚖️" title="What do you need help with?" />
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Select your grievance">
+            {GRIEVANCE_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                role="radio"
+                aria-checked={grievance === opt.value}
+                onClick={() => setGrievance(opt.value)}
+                className={`flex items-start gap-4 rounded-xl border-2 p-4 text-left transition-all duration-200 hover:border-brand-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                  grievance === opt.value
+                    ? 'border-brand-500 bg-brand-50 shadow-card'
+                    : 'border-surface-200 bg-surface-50'
+                }`}
+              >
+                <span className="text-2xl leading-none mt-0.5" aria-hidden="true">
+                  {opt.icon}
+                </span>
+                <div>
+                  <p className={`text-sm font-semibold ${grievance === opt.value ? 'text-brand-700' : 'text-surface-800'}`}>
+                    {opt.value}
+                  </p>
+                  <p className="text-xs text-surface-500 mt-0.5 leading-relaxed">
+                    {opt.desc}
+                  </p>
+                </div>
+                {grievance === opt.value && (
+                  <span className="ml-auto text-brand-500 font-bold text-lg leading-none">✓</span>
+                )}
+              </button>
+            ))}
           </div>
 
-          <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-surface-200 bg-surface-50 p-4 transition-colors hover:bg-brand-50 hover:border-brand-200">
+          <div className="flex justify-between pt-2">
+            <button
+              type="button"
+              onClick={() => setStep(2)}
+              className="btn-secondary"
+            >
+              ← Back
+            </button>
+            <button
+              type="button"
+              onClick={() => setStep(4)}
+              disabled={!step3Valid}
+              className="btn-primary"
+            >
+              Next — Confirm & Send →
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* ---- STEP 4: Consent & Submit ---- */}
+      {step === 4 && (
+        <section className="card-flat space-y-6 animate-slide-up">
+          <StepHeader n={4} icon="🔒" title="Review & give consent" />
+
+          {/* Summary */}
+          <div className="rounded-xl bg-surface-50 border border-surface-200 divide-y divide-surface-100 text-sm">
+            <SummaryRow label="District" value={district} />
+            <SummaryRow label="Documents" value={`${staged.length} added`} />
+            <SummaryRow label="Help needed" value={grievance} />
+            {monthlyIncome && <SummaryRow label="Monthly income" value={`₹ ${monthlyIncome}`} />}
+          </div>
+
+          {/* Consent checkbox */}
+          <label
+            htmlFor="consent-checkbox"
+            className="flex items-start gap-4 cursor-pointer rounded-xl border-2 border-surface-200 bg-surface-50 p-5 transition-all duration-200 hover:bg-brand-50 hover:border-brand-300"
+          >
             <input
+              id="consent-checkbox"
               type="checkbox"
               checked={consent}
               onChange={(e) => setConsent(e.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-surface-300 text-brand-600 focus:ring-brand-500"
+              className="mt-0.5 h-5 w-5 rounded border-surface-300 text-brand-600 focus:ring-brand-500 shrink-0"
             />
             <span className="text-sm text-surface-700 leading-relaxed">
-              I agree that NyayaSetu may store and process these documents to
-              check which legal aid schemes apply to me, under the{' '}
-              <strong>Digital Personal Data Protection Act, 2023</strong>.
+              I agree that{' '}
+              <strong className="text-surface-900">NyayaSetu</strong> may store and
+              process these documents to check which legal aid schemes apply to me,
+              under the{' '}
+              <strong className="text-surface-900">
+                Digital Personal Data Protection Act, 2023
+              </strong>
+              . This is{' '}
+              <em>not legal advice</em> — a trained legal aid worker reviews every
+              request.
             </span>
           </label>
-        </section>
 
-        {/* ---- Error / Submit ---- */}
-        {error && (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 animate-slide-up" role="alert">
-            {error}
-          </div>
-        )}
+          {/* Not legal advice notice */}
+          <p className="text-xs text-surface-400 text-center leading-relaxed px-4">
+            🔐 Your data is encrypted and never shared with third parties without your
+            permission.
+          </p>
 
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pb-4">
-          <button
-            type="button"
-            onClick={submit}
-            disabled={!canSubmit}
-            className="btn-primary w-full sm:w-auto"
-          >
-            {submitting ? (
-              <>
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                Sending…
-              </>
-            ) : (
-              'Send for review'
-            )}
-          </button>
-          {progress && (
-            <span className="text-sm font-medium text-brand-600 animate-pulse text-center sm:text-left w-full sm:w-auto">
-              {progress}
-            </span>
+          {error && (
+            <div
+              className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 animate-slide-up"
+              role="alert"
+            >
+              {error}
+            </div>
           )}
-        </div>
+
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pt-2">
+            <button
+              type="button"
+              onClick={() => setStep(3)}
+              className="btn-secondary w-full sm:w-auto"
+              disabled={submitting}
+            >
+              ← Back
+            </button>
+            <button
+              type="button"
+              onClick={submit}
+              disabled={!canSubmit}
+              className="btn-primary w-full sm:w-auto"
+            >
+              {submitting ? (
+                <>
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  {progress ?? 'Sending…'}
+                </>
+              ) : (
+                '🚀 Send for review'
+              )}
+            </button>
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+
+/* ---------- Sub-components ---------- */
+
+function StepHeader({
+  n,
+  icon,
+  title,
+}: {
+  n: number;
+  icon: string;
+  title: string;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <span
+        className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-100 text-brand-600 text-base"
+        aria-hidden="true"
+      >
+        {icon}
+      </span>
+      <div>
+        <p className="text-xs font-medium text-surface-400 uppercase tracking-wider">
+          Step {n} of 4
+        </p>
+        <h2 className="font-heading text-lg font-bold text-surface-900 leading-tight">
+          {title}
+        </h2>
       </div>
     </div>
   );
@@ -298,19 +483,35 @@ export default function CitizenUploadPage() {
 
 function Field({
   label,
+  required,
   children,
 }: {
   label: string;
+  required?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <label className="block space-y-1.5">
-      <span className="block text-sm font-medium text-surface-700">{label}</span>
+    <div className="space-y-1.5">
+      <span className="block text-sm font-medium text-surface-700">
+        {label}
+        {required && (
+          <span className="ml-1 text-danger text-xs" aria-label="required">
+            *
+          </span>
+        )}
+      </span>
       {children}
-    </label>
+    </div>
   );
 }
 
-function labelFor(value: DocType): string {
-  return DOC_TYPES.find((d) => d.value === value)?.label ?? value;
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between px-4 py-3">
+      <span className="text-surface-500 font-medium">{label}</span>
+      <span className="text-surface-900 font-semibold text-right max-w-[60%]">
+        {value}
+      </span>
+    </div>
+  );
 }

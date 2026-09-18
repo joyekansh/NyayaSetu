@@ -15,7 +15,8 @@ const BASE_URL =
 export interface UploadOptions {
   caseId: string;
   file: Blob;
-  docType: DocType;
+  /** Optional: if omitted, the backend OCR will auto-identify the document type. */
+  docType?: DocType | null;
   filename?: string;
   /** 0–1, for a real progress bar during a slow kiosk upload. */
   onProgress?: (fraction: number) => void;
@@ -31,7 +32,7 @@ export function uploadDocument(options: UploadOptions): Promise<DocumentRecord> 
   return new Promise((resolve, reject) => {
     const form = new FormData();
     form.append('file', file, filename);
-    form.append('doc_type', docType);
+    if (docType) form.append('doc_type', docType);
 
     const xhr = new XMLHttpRequest();
     xhr.open('POST', `${BASE_URL}/cases/${caseId}/documents`);

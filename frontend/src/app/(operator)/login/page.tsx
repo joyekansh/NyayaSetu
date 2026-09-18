@@ -11,7 +11,7 @@
 import { Suspense, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { apiFetch, setStoredToken } from "@/lib/apiClient";
-import type { LoginResponse } from "@/types/api";
+import type { TokenPair } from "@/types/api";
 
 const USE_MOCKS = process.env.NEXT_PUBLIC_USE_MOCKS === "true";
 
@@ -37,16 +37,16 @@ function LoginForm() {
     setError(null);
 
     try {
-      let response: LoginResponse;
+      let response: TokenPair;
       if (USE_MOCKS) {
         response = {
           access_token: "mock-token",
           refresh_token: "mock-refresh",
           role: "PARALEGAL",
           display_name: username || "Demo Paralegal",
-        };
+        } as unknown as TokenPair;
       } else {
-        response = await apiFetch<LoginResponse>("/auth/login", {
+        response = await apiFetch<TokenPair>("/auth/login", {
           method: "POST",
           body: { username, password },
           skipAuth: true,
