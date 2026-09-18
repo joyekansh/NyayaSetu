@@ -19,12 +19,27 @@ def test_parser_factory_selects_income_parser() -> None:
     assert isinstance(parser_for("income_certificate"), IncomeCertificateParser)
 
 
-@pytest.mark.parametrize("declared_type", [None, "OTHER", "AADHAAR", "unrecognised"])
+@pytest.mark.parametrize("declared_type", [None, "OTHER", "unrecognised"])
 def test_parser_factory_rejects_unknown_types(declared_type: object) -> None:
     from app.extraction.parser_factory import UnsupportedDocumentTypeError, parser_for
 
     with pytest.raises(UnsupportedDocumentTypeError):
         parser_for(declared_type)
+
+
+def test_aadhaar_parser_normalizes_fields() -> None:
+    from app.extraction.parser_factory import parser_for
+
+    result = parser_for("AADHAAR").parse(
+        "Aadhaar No: 1234 5678 9012\nName: Ramesh Kumar\nDOB: 15/08/1985\nGender: Male"
+    )
+
+    assert _field_values(result) == {
+        "aadhaar_number": "1234 5678 9012",
+        "name": "Ramesh Kumar",
+        "dob": "1985-08-15",
+        "gender": "Male",
+    }
 
 
 def test_income_certificate_parser_normalizes_amount_and_date() -> None:
