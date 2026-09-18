@@ -48,10 +48,26 @@ class RepeatEscalationCheck(UrgencyCheck):
         return None
 
 
+class MedicalEmergencyCheck(UrgencyCheck):
+    def evaluate(self, case: CaseUrgencyInput) -> UrgencySignal | None:
+        if case.medical_emergency_flag:
+            return UrgencySignal(name="MEDICAL_EMERGENCY", weight=30)
+        return None
+
+
+class IncomeLossCheck(UrgencyCheck):
+    def evaluate(self, case: CaseUrgencyInput) -> UrgencySignal | None:
+        if case.sudden_income_loss_flag:
+            return UrgencySignal(name="SUDDEN_INCOME_LOSS", weight=15)
+        return None
+
+
 DEFAULT_URGENCY_CHECKS: tuple[UrgencyCheck, ...] = (
     ViolenceCheck(),
     EvictionTimelineCheck(),
     DetentionCheck(),
+    MedicalEmergencyCheck(),
     DependentRiskCheck(),
     RepeatEscalationCheck(),
+    IncomeLossCheck(),
 )

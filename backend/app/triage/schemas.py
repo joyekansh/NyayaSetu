@@ -23,6 +23,8 @@ class CaseUrgencyInput:
     criminal_detention_no_counsel_flag: bool = False
     minor_or_dependent_at_risk: bool = False
     repeat_case_escalation: bool = False
+    medical_emergency_flag: bool = False
+    sudden_income_loss_flag: bool = False
 
     @classmethod
     def from_data(cls, data: object) -> "CaseUrgencyInput":
@@ -41,6 +43,8 @@ class CaseUrgencyInput:
             ),
             minor_or_dependent_at_risk=_strict_true(data.get("minor_or_dependent_at_risk")),
             repeat_case_escalation=_strict_true(data.get("repeat_case_escalation")),
+            medical_emergency_flag=_strict_true(data.get("medical_emergency_flag")),
+            sudden_income_loss_flag=_strict_true(data.get("sudden_income_loss_flag")),
         )
 
 
