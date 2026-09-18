@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from app.config import Settings, get_settings
+from app.intake.router import router as intake_router
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -11,6 +12,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def health() -> dict[str, str]:
         return {"status": "ok"}
 
+    app.include_router(intake_router, prefix=active_settings.api_v1_prefix)
     return app
 
 
