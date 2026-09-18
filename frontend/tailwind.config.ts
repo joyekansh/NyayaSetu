@@ -50,6 +50,19 @@ const config: Config = {
         success: '#10b981',
         warning: '#f59e0b',
         danger: '#dc2626',
+        gov: {
+          blue: {
+            DEFAULT: '#003087',
+            dark: '#001a4d',
+            light: '#e8eef7',
+          },
+          orange: '#ff6200',
+          green: '#1a7a4a',
+          red: '#c0392b',
+          purple: '#5b2d8e',
+          teal: '#00796b',
+          border: '#d0d5dd',
+        },
       },
       boxShadow: {
         glow: '0 0 20px rgba(99, 102, 241, 0.15)',

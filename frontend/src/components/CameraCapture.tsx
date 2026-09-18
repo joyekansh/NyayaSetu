@@ -33,6 +33,7 @@ export default function CameraCapture({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const [phase, setPhase] = useState<Phase>('idle');
   const [error, setError] = useState<string | null>(null);
 
@@ -161,15 +162,34 @@ export default function CameraCapture({
           disabled={disabled}
           className="rounded-md border border-slate-300 px-4 py-2.5 text-sm disabled:opacity-50"
         >
-          {chooseFileLabel}
+          📁 Upload from device
+        </button>
+        <button
+          type="button"
+          onClick={() => cameraInputRef.current?.click()}
+          disabled={disabled}
+          className="rounded-md border border-slate-300 px-4 py-2.5 text-sm disabled:opacity-50"
+        >
+          📷 Open camera
         </button>
       </div>
 
       <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        hidden
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) void handleFile(file);
+          e.target.value = '';
+        }}
+      />
+      <input
         ref={fileInputRef}
         type="file"
         accept="image/*,application/pdf"
-        capture="environment"
         hidden
         onChange={(e) => {
           const file = e.target.files?.[0];

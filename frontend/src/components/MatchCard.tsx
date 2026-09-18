@@ -1,31 +1,17 @@
 "use client";
 
-/**
- * components/MatchCard.tsx
- *
- * Pure presentational component (T3). No internal fetch calls — the parent
- * page owns data-fetching and passes callbacks down. This is what F4/F5
- * render against.
- *
- * F4 requirement: always show the exact Act name, section number, and
- * verbatim clause text — never a generated summary standing in for the
- * clause. Don't "clean up" or truncate clause_text here beyond a
- * show-more affordance.
- */
-
 import { useState } from "react";
-import type { MatchDecisionAction, SchemeMatch } from "@/types/api";
+import type { OperatorDecision, SchemeMatch } from "@/types/api";
 
 interface MatchCardProps {
   scheme_name: string;
-  act_name: string;
-  section_number: string;
+  act_name: string | null;
+  section_number: string | null;
   clause_text: string;
   final_confidence: number;
-  operator_decision: MatchDecisionAction | null;
-  /** Disabled once the case is locked (post-referral) or read-only. */
+  operator_decision: OperatorDecision;
   readOnly?: boolean;
-  onDecide?: (action: MatchDecisionAction, reason?: string) => void | Promise<void>;
+  onDecide?: (action: OperatorDecision, reason?: string) => void | Promise<void>;
 }
 
 function confidenceLabel(score: number): { label: string; className: string } {
@@ -44,20 +30,20 @@ export default function MatchCard({
   readOnly = false,
   onDecide,
 }: MatchCardProps) {
-  const [pendingAction, setPendingAction] = useState<MatchDecisionAction | null>(null);
+  const [pendingAction, setPendingAction] = useState<OperatorDecision | null>(null);
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const confidence = confidenceLabel(final_confidence);
-  const needsReason = pendingAction === "OVERRIDE" || pendingAction === "REJECT";
+  const needsReason = pendingAction === "overridden" || pendingAction === "rejected";
 
   async function handleApprove() {
     if (!onDecide) return;
     setSubmitting(true);
     setError(null);
     try {
-      await onDecide("APPROVE");
+      await onDecide("approved");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not record decision.");
     } finally {
@@ -68,8 +54,6 @@ export default function MatchCard({
   async function handleConfirmReasoned() {
     if (!onDecide || !pendingAction) return;
     if (!reason.trim()) {
-      // T7: client-side guard mirroring the server's reason-required rule.
-      // This is UX only — the real guarantee is server-side.
       setError("A reason is required before this decision can be submitted.");
       return;
     }
@@ -92,7 +76,7 @@ export default function MatchCard({
         <div>
           <h3 className="text-base font-semibold text-slate-900">{scheme_name}</h3>
           <p className="mt-0.5 text-sm text-slate-500">
-            {act_name} — {section_number}
+            {act_name ?? 'Unknown Act'} — {section_number ?? 'Unknown Section'}
           </p>
         </div>
         <span
@@ -106,13 +90,13 @@ export default function MatchCard({
         {clause_text}
       </blockquote>
 
-      {operator_decision && (
+      {operator_decision && operator_decision !== 'pending' && (
         <p className="mt-3 text-sm font-medium text-slate-600">
           Decision recorded: <span className="uppercase">{operator_decision}</span>
         </p>
       )}
 
-      {!readOnly && !operator_decision && (
+      {!readOnly && (!operator_decision || operator_decision === 'pending') && (
         <div className="mt-4">
           {!pendingAction && (
             <div className="flex flex-wrap gap-2">
@@ -126,7 +110,7 @@ export default function MatchCard({
               </button>
               <button
                 type="button"
-                onClick={() => setPendingAction("OVERRIDE")}
+                onClick={() => setPendingAction("overridden")}
                 disabled={submitting}
                 className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
               >
@@ -134,7 +118,7 @@ export default function MatchCard({
               </button>
               <button
                 type="button"
-                onClick={() => setPendingAction("REJECT")}
+                onClick={() => setPendingAction("rejected")}
                 disabled={submitting}
                 className="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
               >
@@ -146,7 +130,7 @@ export default function MatchCard({
           {needsReason && (
             <div className="mt-3 space-y-2">
               <label className="block text-sm font-medium text-slate-700">
-                Reason for {pendingAction === "OVERRIDE" ? "override" : "rejection"}
+                Reason for {pendingAction === "overridden" ? "override" : "rejection"}
               </label>
               <textarea
                 value={reason}
@@ -162,7 +146,7 @@ export default function MatchCard({
                   disabled={submitting || !reason.trim()}
                   className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-40"
                 >
-                  Confirm {pendingAction === "OVERRIDE" ? "override" : "rejection"}
+                  Confirm {pendingAction === "overridden" ? "override" : "rejection"}
                 </button>
                 <button
                   type="button"
@@ -187,7 +171,6 @@ export default function MatchCard({
   );
 }
 
-/** Convenience adapter for pages that have a full SchemeMatch object. */
 export function matchCardPropsFrom(match: SchemeMatch) {
   return {
     scheme_name: match.scheme_name,
