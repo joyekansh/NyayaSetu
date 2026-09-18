@@ -98,7 +98,20 @@ class DocumentExtractionProcessor:
             )
 
             extracted = {field.name: field.value for field in parsed.fields}
-            triage_input = build_urgency_case_data(extracted, reference_date=self._reference_date)
+            
+            # --- LLM Grievance Analysis ---
+            grievance_text = str(case.intake_answers.get('grievance_type', ''))
+            description_text = str(case.intake_answers.get('description', ''))
+            full_grievance = f"{description_text}\n{grievance_text}".strip()
+            
+            from app.extraction.llm_orchestrator import analyse_grievance
+            analysis = analyse_grievance(full_grievance)
+            
+            triage_input = build_urgency_case_data(
+                extracted, 
+                intake_answers=analysis.to_urgency_dict(), 
+                reference_date=self._reference_date
+            )
             triage = score_case(triage_input)
             case.urgency_score = float(triage.score)
             case.urgency_tier = triage.tier
