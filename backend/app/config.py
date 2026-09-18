@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     app_name: str = "NyayaSetu API"
     environment: str = "development"
     database_url: str = "postgresql+psycopg://nyayasetu:nyayasetu@postgres:5432/nyayasetu"
+    redis_url: str = "redis://redis:6379/0"
     cors_origins: list[str] = []
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
