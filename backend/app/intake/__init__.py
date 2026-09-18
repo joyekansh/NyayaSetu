@@ -1,0 +1,2 @@
+"""Secure document intake primitives."""
+

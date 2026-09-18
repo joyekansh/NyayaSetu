@@ -1,2 +1,7 @@
+__pycache__/
+.pytest_cache/
+.env
+*.py[cod]
+.worktrees/
 node_modules/
 frontend/.next/
