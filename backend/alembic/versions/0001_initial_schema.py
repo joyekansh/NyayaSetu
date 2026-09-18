@@ -140,6 +140,26 @@ def upgrade() -> None:
     )
     op.create_index("ix_documents_case_id", "documents", ["case_id"], unique=False)
     op.create_index("ix_documents_uploaded_by_user_id", "documents", ["uploaded_by_user_id"], unique=False)
+    
+    # Ensure audit_events is append-only
+    op.execute(
+        """
+        CREATE OR REPLACE FUNCTION prevent_audit_update_delete()
+        RETURNS TRIGGER AS $$
+        BEGIN
+            RAISE EXCEPTION 'Audit events cannot be modified or deleted.';
+        END;
+        $$ LANGUAGE plpgsql;
+        """
+    )
+    op.execute(
+        """
+        CREATE TRIGGER trg_audit_append_only
+        BEFORE UPDATE OR DELETE ON audit_events
+        FOR EACH ROW
+        EXECUTE FUNCTION prevent_audit_update_delete();
+        """
+    )
     op.create_table(
         "extracted_fields",
         sa.Column("id", sa.Uuid(), nullable=False),
@@ -155,9 +175,47 @@ def upgrade() -> None:
     )
     op.create_index("ix_extracted_fields_document_field", "extracted_fields", ["document_id", "field_name"], unique=False)
     op.create_index("ix_extracted_fields_document_id", "extracted_fields", ["document_id"], unique=False)
+    op.create_table(
+        "scheme_clauses",
+        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("scheme_id", sa.String(length=100), nullable=False),
+        sa.Column("scheme_name", sa.String(length=255), nullable=False),
+        sa.Column("clause_id", sa.String(length=100), nullable=False),
+        sa.Column("title", sa.String(length=255), nullable=False),
+        sa.Column("text", sa.Text(), nullable=False),
+        sa.Column("criteria", sa.JSON(), nullable=False),
+        sa.Column("benefit_description", sa.Text(), nullable=False),
+        sa.Column("authority", sa.String(length=255), nullable=False),
+        sa.Column("act_reference", sa.String(length=255), nullable=False),
+        sa.Column("is_active", sa.Boolean(), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("scheme_id", "clause_id", "version", name="uq_scheme_clause_version"),
+    )
+    op.create_index("ix_scheme_clauses_scheme_id", "scheme_clauses", ["scheme_id"], unique=False)
+    op.create_index("ix_scheme_clauses_clause_id", "scheme_clauses", ["clause_id"], unique=False)
+    op.create_table(
+        "referrals",
+        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("case_id", sa.Uuid(), nullable=False),
+        sa.Column("operator_id", sa.String(length=128), nullable=False),
+        sa.Column("summary", sa.Text(), nullable=False),
+        sa.Column("referred_schemes", sa.Text(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False),
+        sa.ForeignKeyConstraint(["case_id"], ["cases.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("case_id"),
+    )
+    op.create_index("ix_referrals_case_id", "referrals", ["case_id"], unique=False)
 
 
 def downgrade() -> None:
+    op.drop_index("ix_referrals_case_id", table_name="referrals")
+    op.drop_table("referrals")
+    op.drop_index("ix_scheme_clauses_clause_id", "scheme_clauses")
+    op.drop_index("ix_scheme_clauses_scheme_id", "scheme_clauses")
+    op.drop_table("scheme_clauses")
     op.drop_index("ix_extracted_fields_document_id", table_name="extracted_fields")
     op.drop_index("ix_extracted_fields_document_field", table_name="extracted_fields")
     op.drop_table("extracted_fields")
@@ -168,3 +226,4 @@ def downgrade() -> None:
     op.drop_index("ix_audit_events_case_sequence", table_name="audit_events")
     op.drop_table("audit_events")
     op.drop_table("cases")
+
