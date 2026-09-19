@@ -23,7 +23,18 @@ function mockDelay<T>(value: T, ms = 300): Promise<T> {
 
 export async function getQueue(): Promise<{ items: QueueItem[] }> {
   if (USE_MOCKS) return mockDelay({ items: mockQueueItems });
-  return apiFetch<{ items: QueueItem[] }>("/queue");
+  const data = await apiFetch<{ cases: any[] }>("/operator/queue");
+  return {
+    items: data.cases.map((c) => ({
+      case_id: c.id,
+      urgency_tier: c.urgency_tier,
+      urgency_score: c.urgency_score,
+      sla_seconds_remaining: 3600,
+      district: c.district || 'Unknown',
+      document_count: 1,
+      status: c.status
+    }))
+  };
 }
 
 export async function getCase(caseId: string): Promise<CaseDetail> {
@@ -66,9 +77,10 @@ export async function postDecision(
       decided_at: new Date().toISOString(),
     });
   }
+  const endpoint = `/operator/cases/${caseId}/matches/${matchId}/${payload.decision}`;
   return apiFetch<SchemeMatch>(
-    `/cases/${caseId}/matches/${matchId}/decision`,
-    { method: "POST", body: payload }
+    endpoint,
+    { method: "POST", body: { reason: payload.reason } }
   );
 }
 
@@ -83,9 +95,9 @@ export async function postReferral(caseId: string, notes: string): Promise<Refer
       issued_at: new Date().toISOString(),
     });
   }
-  return apiFetch<ReferralReceipt>(`/cases/${caseId}/referral`, {
+  return apiFetch<ReferralReceipt>(`/operator/cases/${caseId}/referral`, {
     method: "POST",
-    body: { notes, referred_to: "Legal Aid Clinic" }
+    body: { summary: notes, referred_schemes: "Approved Schemes" }
   });
 }
 

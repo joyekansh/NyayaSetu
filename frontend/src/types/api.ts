@@ -129,6 +129,7 @@ export interface CaseDetail extends CaseSummary {
   /** Human-readable reason shown to the citizen when `gated` is true. */
   gate_notice: string | null;
   triage_signals: TriageSignal[] | null;
+  triage_reasoning: string | null;
 }
 
 export interface TriageSignal {

@@ -31,17 +31,7 @@ export default function CaseDetailPage() {
       if (detail.gated) {
         setMatches(null);
       } else {
-        try {
-          const matchesList = await getMatches(caseId);
-          setMatches(matchesList);
-        } catch (err) {
-          if (err instanceof GatedCaseError) {
-            setGatedMessage(err.message);
-            setMatches(null);
-          } else {
-            throw err;
-          }
-        }
+        setMatches(detail.matches);
       }
     } catch (err) {
       setLoadError(
@@ -157,10 +147,27 @@ export default function CaseDetailPage() {
         </div>
       </div>
 
+      {caseDetail.triage_reasoning && (
+        <div className="mt-4 rounded-md border border-brand-200 bg-brand-50 p-4">
+          <h2 className="text-sm font-semibold text-brand-900">Triage Reasoning</h2>
+          <p className="mt-1 text-sm text-brand-800 leading-relaxed">
+            {caseDetail.triage_reasoning}
+          </p>
+        </div>
+      )}
+
       <section className="mt-6 grid gap-6 md:grid-cols-2">
         <div className="rounded-lg border border-slate-200 bg-white p-4">
           <h2 className="text-sm font-semibold text-slate-900">Original document</h2>
-          {doc?.preview_url ? (
+          {doc?.doc_type === 'speech_recording' ? (
+            doc.preview_url ? (
+              <div className="mt-3 w-full rounded-md border border-slate-100 bg-slate-50 p-4 flex justify-center">
+                <audio src={doc.preview_url} controls className="w-full" />
+              </div>
+            ) : (
+              <p className="mt-3 text-sm text-slate-500">Audio recording is unavailable.</p>
+            )
+          ) : doc?.preview_url ? (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
               src={doc.preview_url}

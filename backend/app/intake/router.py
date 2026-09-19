@@ -207,6 +207,7 @@ def get_case_detail(
         "matches": matches_data,
         "gated": not decision.allowed,
         "gate_notice": decision.reason if not decision.allowed else None,
-        "triage_signals": None
+        "triage_signals": None,
+        "triage_reasoning": case.triage_reasoning
     }
 
