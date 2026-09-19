@@ -14,6 +14,7 @@ from app.models.document import DocumentType
         ("identity.jpg", b"\xff\xd8\xff\xe0jpeg-data", "image/jpeg"),
         ("identity.png", b"\x89PNG\r\n\x1a\nimage-data", "image/png"),
         ("notice.pdf", b"%PDF-1.7\nbody", "application/pdf"),
+        ("grievance.webm", b"\x1a\x45\xdf\xa3webm-audio", "audio/webm"),
     ],
 )
 def test_upload_input_accepts_supported_bytes(filename: str, content: bytes, content_type: str) -> None:
@@ -43,4 +44,3 @@ def test_upload_input_rejects_disguised_or_unsafe_files(filename: str, content: 
 def test_validate_upload_rejects_content_over_limit() -> None:
     with pytest.raises(UploadValidationError, match="size limit"):
         validate_upload(filename="notice.pdf", content=b"%PDF-1.7\nbody", max_bytes=5)
-
