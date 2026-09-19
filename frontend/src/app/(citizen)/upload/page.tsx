@@ -186,7 +186,7 @@ export default function CitizenUploadPage() {
         await documentApi.upload({
           caseId: created.id,
           file: item.file,
-          docType: item.docType ?? 'income_cert',
+          docType: item.docType ?? undefined,
           filename:
             item.docType === 'speech_recording'
               ? `grievance_${i + 1}.webm`
@@ -340,7 +340,7 @@ export default function CitizenUploadPage() {
           <StepHeader n={2} icon="📷" title="Take pictures of your documents" />
 
           <p className="text-sm text-surface-500 leading-relaxed -mt-1">
-            Take a clear photo of each document — income certificates, eviction notices,
+            Take a clear photo of each document — eviction notices, court summons,
             Aadhaar, wage slips, or any other paperwork. Our system will{' '}
             <strong>automatically identify</strong> what each document is.
           </p>
