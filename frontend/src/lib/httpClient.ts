@@ -55,7 +55,7 @@ export class HttpError extends Error {
   }
 }
 
-function readDetail(body: ApiErrorBody | null, fallback: string): string {
+export function readDetail(body: ApiErrorBody | null, fallback: string): string {
   if (!body) return fallback;
   if (typeof body.detail === 'string') return body.detail;
   if (Array.isArray(body.detail) && body.detail.length > 0) {

@@ -6,7 +6,7 @@
  * worker. The UI must poll, not block (NFR: OCR under ~8s, async).
  */
 
-import { HttpError, citizenAuth, request } from './httpClient';
+import { HttpError, citizenAuth, request, readDetail } from './httpClient';
 import type { DocType, DocumentRecord, DocumentStatus } from '@/types/api';
 
 const BASE_URL =
@@ -59,8 +59,10 @@ export function uploadDocument(options: UploadOptions): Promise<DocumentRecord> 
         reject(
           new HttpError(
             xhr.status,
-            (parsed as { detail?: string } | null)?.detail ??
-              'Upload failed. Try capturing the document again.',
+            readDetail(
+              parsed as any,
+              'Upload failed. Try capturing the document again.'
+            ),
             null,
           ),
         );

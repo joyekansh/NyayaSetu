@@ -6,6 +6,7 @@ from sqlalchemy import CheckConstraint, DateTime, Enum, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
+from app.models.user import User
 
 
 class DocumentType(StrEnum):

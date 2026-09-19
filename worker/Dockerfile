@@ -7,6 +7,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+RUN apt-get update && apt-get install -y --no-install-recommends tesseract-ocr && rm -rf /var/lib/apt/lists/*
 RUN groupadd --gid 10001 app && useradd --uid 10001 --gid app --create-home --shell /usr/sbin/nologin app
 
 COPY backend/requirements.txt ./requirements.txt
@@ -16,5 +17,4 @@ COPY --chown=app:app backend/ ./
 
 USER app
 
-# Replace this placeholder with the task-runner command when worker code is added.
-CMD ["sh", "-c", "trap 'exit 0' TERM INT; sleep infinity & wait"]
+CMD ["celery", "-A", "app.celery_app", "worker", "--loglevel=info", "-Q", "documents,celery"]

@@ -57,6 +57,7 @@ services:
       CHROMA_HOST: chroma
       CHROMA_PORT: "8000"
       DOCUMENT_STORAGE_ROOT: /app/data/documents
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
     volumes:
       - document_data:/app/data/documents
     depends_on:
@@ -85,6 +86,7 @@ services:
       CHROMA_HOST: chroma
       CHROMA_PORT: "8000"
       DOCUMENT_STORAGE_ROOT: /app/data/documents
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
     volumes:
       - document_data:/app/data/documents
     depends_on:

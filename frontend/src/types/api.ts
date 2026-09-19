@@ -92,8 +92,6 @@ export interface CurrentUser {
 /* ------------------------------------------------------------------ */
 
 export interface CreateCaseBody {
-  /** Set when a paralegal files on a walk-in citizen's behalf (FR-1 assisted mode). */
-  assisted_mode: boolean;
   district: string;
   language: Language;
   /** Short structured intake answers (FR-4). Keys mirror the questionnaire IDs. */

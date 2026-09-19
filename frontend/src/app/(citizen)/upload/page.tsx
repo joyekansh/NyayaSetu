@@ -12,7 +12,7 @@
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import CameraCapture from '@/components/CameraCapture';
-import { HttpError } from '@/lib/httpClient';
+import { citizenAuth, HttpError } from '@/lib/httpClient';
 import { citizenCaseApi } from '@/lib/citizenCaseApi';
 import { documentApi } from '@/lib/documentApi';
 import type { CaseSummary, Language } from '@/types/api';
@@ -103,9 +103,29 @@ export default function CitizenUploadPage() {
     setSubmitting(true);
     setError(null);
     try {
+      // Silently obtain a citizen token if not already authenticated.
+      // This means the citizen never needs to visit /login — they just fill
+      // the form and submit. The shared 'citizen' account is used for demo.
+      if (!citizenAuth.token()) {
+        setProgress('Authenticating…');
+        const BASE_URL =
+          (process.env.NEXT_PUBLIC_API_BASE_URL ?? '/api/v1').replace(/\/$/, '');
+        const form = new URLSearchParams();
+        form.set('username', 'citizen');
+        form.set('password', 'password123');
+        const res = await fetch(`${BASE_URL}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: form.toString(),
+        });
+        if (res.ok) {
+          const data = await res.json() as { access_token: string };
+          citizenAuth.save(data.access_token);
+        }
+      }
+
       setProgress('Creating your case…');
       const created: CaseSummary = await citizenCaseApi.create({
-        assisted_mode: false,
         district: district.trim(),
         language,
         intake_answers: {
@@ -122,7 +142,8 @@ export default function CitizenUploadPage() {
         await documentApi.upload({
           caseId: created.id,
           file: item.file,
-          // No docType — backend OCR will auto-identify
+          // Backend requires doc_type; OCR pipeline will refine it later
+          docType: 'income_cert',
           filename: item.isPdf ? `document_${i + 1}.pdf` : `document_${i + 1}.jpg`,
         });
       }

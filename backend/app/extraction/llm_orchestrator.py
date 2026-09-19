@@ -195,17 +195,23 @@ def analyse_grievance(grievance_text: str) -> GrievanceAnalysis:
 
     client = _get_client()
 
-    response = client.models.generate_content(
-        model=_model_name(),
-        contents=f"Analyse this citizen grievance:\n\n{grievance_text}",
-        config=types.GenerateContentConfig(
-            system_instruction=_GRIEVANCE_SYSTEM_INSTRUCTION,
-            temperature=0.1,
-            max_output_tokens=1024,
-        ),
-    )
-
-    return _parse_grievance_response(response.text or "")
+    try:
+        response = client.models.generate_content(
+            model=_model_name(),
+            contents=f"Analyse this citizen grievance:\n\n{grievance_text}",
+            config=types.GenerateContentConfig(
+                system_instruction=_GRIEVANCE_SYSTEM_INSTRUCTION,
+                temperature=0.1,
+                max_output_tokens=1024,
+            ),
+        )
+        return _parse_grievance_response(response.text or "")
+    except Exception as e:
+        logger.error(f"LLM API failed (503/overload): {e}. Returning safe default.")
+        return GrievanceAnalysis(
+            intent="Unknown due to server overload",
+            summary="System could not process grievance text.",
+        )
 
 
 def _parse_grievance_response(raw_json: str) -> GrievanceAnalysis:
