@@ -1,82 +1,125 @@
 # NyayaSetu
 
-**Evidence-backed legal aid triage for India's statutory entitlement programs.**
+**Evidence-backed legal aid triage and referral for India's statutory entitlement programs.**
 
-NyayaSetu is not a legal-advice chatbot. It is an automated intake and triage pipeline that converts raw, multilingual physical documents (Aadhaar, income certificates, FIRs, eviction notices, etc.) into a structured, statute-grounded case dossier for legal-aid cells and paralegals — with every recommendation traceable to an exact legislative clause, and every high-risk case gated to mandatory human review before any output is returned.
+NyayaSetu is not a legal-advice chatbot. It is an automated intake, triage, and referral pipeline that converts a citizen's documents *and* spoken complaint into a structured, statute-grounded case dossier — routing the most vulnerable cases straight to a human and never to AI-generated advice — then hands the case directly into the real government legal-aid system (NALSA/LSAMS) with a verifiable official reference number, under a permanent audit trail.
 
 ---
 
 ## Table of Contents
 
+- [Problem Statement](#problem-statement)
+- [The Solution](#the-solution)
 - [Core Differentiators](#core-differentiators)
+- [Who Uses It](#who-uses-it)
 - [Tech Stack](#tech-stack)
-- [Architecture](#architecture)
+- [Architecture & Data Flow](#architecture--data-flow)
 - [Project Structure](#project-structure)
-- [Getting Started](#getting-started)
-- [Environment Variables](#environment-variables)
-- [Running the Project](#running-the-project)
-- [Testing](#testing)
 - [Team & Ownership](#team--ownership)
 - [Documentation](#documentation)
 - [Known Limitations (Hackathon Scope)](#known-limitations-hackathon-scope)
 
 ---
 
+## Problem Statement
+
+Low-income and marginalized citizens in India are legally entitled to free legal aid, victim compensation, and welfare schemes — but structurally cannot access them:
+
+- **Fragmented physical documentation** citizens must gather and correctly present, with no help interpreting what's actually needed for their situation.
+- **Opaque eligibility criteria** buried in dense, siloed statutory language across multiple state-specific schemes.
+- **A broken supply-demand match**: roughly 1 lawyer per 10,000 rural people, and very low public awareness of what's even available.
+
+Existing government portals are passive, unindexed directories. Generic AI chatbots fill part of the gap but introduce a worse problem: they can hallucinate legal advice with no statutory grounding and no accountability — unacceptable in a context where a wrong answer can cost someone their case, their safety, or their entitlement window.
+
+## The Solution
+
+NyayaSetu sits in front of India's existing legal-aid infrastructure (NALSA, SLSAs, DLSAs) on one non-negotiable principle: **AI prepares evidence, a human always decides — enforced structurally, not as a policy promise.**
+
+- **Converts raw input into structured, verified case data** — documents via OCR/entity extraction, and/or a spoken complaint (Hindi or English) transcribed via ElevenLabs Speech-to-Text and parsed for threat language, temporal markers, and vulnerability signals.
+- **Applies a two-layer, deterministic risk model** — Layer 1 hard triggers (unsafe answer to a mandatory safety question, self-harm/imminent-threat language, minor-abuse disclosure, sub-24h deadline) force Critical regardless of anything else; Layer 2 is a weighted composite score for everything else. Extraction/transcription uncertainty can only push risk *up*, never down.
+- **Routes by risk, not convenience** — Standard-tier cases get an AI-generated Case Dossier with exact statutory citations and confidence scores, explicitly labeled "not legal advice." High/Critical cases (including DV cases, routed to a Protection Officer) get no AI-generated content at all — only a human-reviewed outcome ever reaches the citizen.
+- **Matches against a curated, versioned statutory knowledge base** via hybrid semantic + rule-based retrieval, so every recommendation carries an exact Act, section number, clause text, and confidence score.
+- **Hands off into the real government system** — auto-fills NALSA's actual LSAMS application on operator sign-off, returning a real, independently-trackable Diary/Registration Number.
+- **Leaves a permanent, tamper-evident record** — every OCR parse, transcript, risk decision, match, and human override is written to an append-only, hash-chained audit ledger.
+
 ## Core Differentiators
 
 | Differentiator | What it means in practice |
 |---|---|
 | **Evidence-backed case dossier, not a chatbot** | No free-text generative advice is ever shown to a citizen. Every output is structured data mapped to a statutory clause. |
-| **Deterministic statutory grounding** | Every recommended scheme displays the exact Act, section number, clause text, and a confidence score — sourced from a curated, versioned knowledge base. |
-| **Human-in-the-loop hard gate** | Cases flagged Critical/High urgency (domestic abuse, imminent eviction, arbitrary detention) are architecturally blocked from returning any automated match — enforced at the API layer, not just the UI — until an accredited operator reviews the case. |
-| **Tamper-proof audit trail** | Every OCR parse, semantic match, tier assignment, and human decision is written to an append-only, hash-chained ledger. No `UPDATE`/`DELETE` permissions exist on this table at the database role level. |
+| **Deterministic statutory grounding** | Every recommended scheme displays the exact Act, section number, clause text, and confidence score. |
+| **Two-layer human-in-the-loop hard gate** | Hard triggers (safety check, self-harm language, minor-abuse disclosure, imminent deadlines) force Critical and skip all AI matching; a weighted composite score handles everything else. Enforced at the API layer, not the UI. |
+| **Real government integration** | Referrals are submitted into NALSA's actual LSAMS system, producing a real Diary/Registration Number trackable independently on the official NALSA portal. |
+| **Tamper-proof audit trail** | Every automated and human action is written to an append-only, hash-chained ledger — no `UPDATE`/`DELETE` permissions exist on it. |
+
+## Who Uses It
+
+| User Type | Role |
+|---|---|
+| **Citizen** | Uploads documents and/or speaks their complaint; receives a dossier (Standard tier) or a status update only (High/Critical tier). |
+| **PLV (Para Legal Volunteer) / Kiosk Operator** | Assists citizens with low digital literacy via Assisted Mode; handles Standard-tier case review. |
+| **Panel Lawyer** | Reviews High/Critical tier cases; approves/overrides scheme matches; issues referrals. |
+| **Protection Officer** | Coordinated with specifically for domestic-violence-flagged Critical cases. |
+| **DLSA Admin** | Manages office workload and the versioned statutory knowledge base. |
 
 ---
 
 ## Tech Stack
 
-**Frontend:** Next.js (React 18/19) + TypeScript, Tailwind CSS, shadcn/ui, Lucide Icons, i18next (Hindi/English)
+**Frontend:** Next.js (React) + TypeScript, Tailwind CSS, shadcn/ui, i18next (Hindi/English)
 
-**Backend:** FastAPI (Python 3.11+), Pydantic v2, Celery + Redis for async OCR/extraction tasks
+**Backend:** FastAPI (Python), Pydantic v2, Celery + Redis for async OCR/STT/extraction tasks
 
-**OCR & Extraction:** Tesseract OCR (Hindi + English) or Google Cloud Vision API, regex/heuristic layout parsers
+**Speech & OCR:** ElevenLabs Speech-to-Text, Tesseract OCR / Google Cloud Vision, regex/heuristic layout parsers
 
-**Knowledge Retrieval:** ChromaDB, LangChain, `paraphrase-multilingual-MiniLM-L12-v2` embeddings, hybrid semantic + rule-based matching
+**Knowledge Retrieval:** ChromaDB, LangChain, multilingual sentence embeddings, hybrid semantic + rule-based matching
 
-**Data & Audit:** PostgreSQL 16, append-only audit ledger with SHA-256 hash chaining
+**Data & Audit:** PostgreSQL, append-only hash-chained audit ledger
 
-**Testing:** PyTest, Ragas (retrieval faithfulness), Playwright (E2E)
+**External Integration:** NALSA LSAMS (mocked for hackathon build — see Known Limitations)
 
-**Infra:** Docker & Docker Compose, Nginx + Let's Encrypt, single Linux VM (AWS EC2 t3.large or equivalent)
+**Infra:** Docker & Docker Compose, Nginx + Let's Encrypt, single Linux VM
 
-Full rationale for every choice is in [`docs/NyayaSetu_System_Design_Report.md`](docs/NyayaSetu_System_Design_Report.md).
+Full rationale for every choice is in [`docs/NyayaSetu_System_Design_Report_v2.md`](docs/NyayaSetu_System_Design_Report_v2.md).
 
 ---
 
-## Architecture
+## Architecture & Data Flow
 
-Modular monolith (FastAPI) — one deployable unit, cleanly separated into `intake/`, `extraction/`, `triage/`, `matching/`, `operator/`, `audit/`, and `knowledge_base/` modules, each a future microservice boundary.
+Modular monolith (FastAPI) — cleanly separated into `intake/`, `speech/`, `extraction/`, `triage/`, `matching/`, `operator/`, `referral/`, `audit/`, and `knowledge_base/` modules, each a future microservice boundary.
 
 ```
-Citizen/Kiosk Upload
-      ↓
-Intake API → Postgres (case created)
-      ↓
-Celery Task → OCR Worker → Field Parser → Pydantic validation
-      ↓
-Urgency Scorer (deterministic weighted matrix)
-      ↓
-   ┌──────────────┴──────────────┐
-CRITICAL/HIGH                 STANDARD
-   ↓                              ↓
-HARD GATE                 Semantic + Rule Matcher
-(human queue only)         (statutory KB, ChromaDB)
-   ↓                              ↓
-Operator Console ←───────── Case Dossier Draft
-   ↓
-Approve / Override / Refer
-   ↓
-Every step → Append-only Audit Ledger (hash-chained)
+Citizen: Document Upload  +  Spoken Complaint (ElevenLabs STT)
+                  ↓
+        Intake API → Postgres (case created)
+                  ↓
+   OCR / Transcript Extraction → Pydantic validation
+                  ↓
+        Safety Question Check (immediate short-circuit)
+                  ↓
+   ┌─────────── Layer 1: Hard Triggers ───────────┐
+   │  fires → CRITICAL (skip everything below)    │
+   └───────────────────┬───────────────────────────┘
+                        ↓ (no trigger fired)
+             Layer 2: Weighted Composite Score
+                        ↓
+              ┌─────────┴─────────┐
+        CRITICAL / HIGH        STANDARD
+              ↓                     ↓
+        HARD GATE           Semantic + Rule Matcher
+     (human queue only,     (versioned statutory KB)
+      + Protection Officer         ↓
+       if DV-flagged)      Case Dossier Draft
+              ↓                     ↓
+           Operator Console (PLV / Panel Lawyer)
+                        ↓
+         Approve / Override → Issue Referral
+                        ↓
+        LSAMS Auto-fill → Diary/Registration Number
+                        ↓
+     Citizen: NyayaSetu status + NALSA portal tracking
+
+Every step above → Append-only, hash-chained Audit Ledger
 ```
 
 Full data flow, including the exact file each request passes through, is in [`docs/NyayaSetu_File_Structure_and_Data_Flow.md`](docs/NyayaSetu_File_Structure_and_Data_Flow.md).
@@ -92,11 +135,13 @@ nyayasetu/
 │   └── app/
 │       ├── auth/
 │       ├── intake/
+│       ├── speech/            # ElevenLabs STT integration
 │       ├── extraction/
-│       ├── triage/          # includes gate.py — the hard human-in-the-loop gate
+│       ├── triage/            # includes the hard-trigger chain + risk gate
 │       ├── matching/
 │       ├── operator/
-│       ├── audit/           # append-only ledger
+│       ├── referral/          # LSAMS client (mocked for hackathon)
+│       ├── audit/             # append-only ledger
 │       └── knowledge_base/
 ├── worker/            # Celery worker Dockerfile
 ├── nginx/             # reverse proxy config
@@ -108,143 +153,14 @@ See [`docs/NyayaSetu_File_Structure_and_Data_Flow.md`](docs/NyayaSetu_File_Struc
 
 ---
 
-## Getting Started
-
-### Prerequisites
-
-```bash
-git
-Docker Desktop (or Docker Engine + Docker Compose v2)
-Node.js 20 LTS + npm
-Python 3.11+
-```
-
-### Clone & Install
-
-```bash
-git clone <repo-url> nyayasetu
-cd nyayasetu
-cp .env.example .env        # fill in secrets — see Environment Variables below
-
-# Backend
-cd backend
-python -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
-
-# Frontend
-cd ../frontend
-npm install
-```
-
----
-
-## Environment Variables
-
-Copy `.env.example` to `.env` and set:
-
-```env
-# Database
-DATABASE_URL=postgresql://user:password@localhost:5432/nyayasetu
-
-# Redis / Celery
-REDIS_URL=redis://localhost:6379/0
-
-# Auth
-JWT_SECRET=change-me
-JWT_EXPIRY_MINUTES=30
-
-# OCR
-OCR_ENGINE=tesseract          # or "vision_api"
-GOOGLE_VISION_API_KEY=        # only if OCR_ENGINE=vision_api
-
-# Vector store
-CHROMA_PERSIST_DIR=./data/chroma
-
-# Frontend
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1
-```
-
-Never commit `.env`. Only `.env.example` (with placeholder values) is tracked in git.
-
----
-
-## Running the Project
-
-### Full stack via Docker Compose (recommended)
-
-```bash
-docker compose up --build
-```
-
-This starts: `frontend`, `backend`, `worker` (Celery), `redis`, `postgres`, `chromadb`, `nginx`.
-
-- Frontend: `http://localhost:3000`
-- Backend API: `http://localhost:8000/api/v1`
-- API docs (FastAPI auto-generated): `http://localhost:8000/docs`
-
-### Running services individually (for active development)
-
-```bash
-# Backend
-cd backend
-uvicorn app.main:app --reload --port 8000
-
-# Celery worker
-cd backend
-celery -A app.celery_app worker --loglevel=info
-
-# Frontend
-cd frontend
-npm run dev
-```
-
-### Seeding the statutory knowledge base
-
-```bash
-cd backend
-python -m app.knowledge_base.ingest
-```
-Loads the curated JSON fixtures (NALSA Act 1987, State Victim Compensation Scheme, BOCW Welfare Board rules) from `backend/app/knowledge_base/fixtures/`, chunks them at clause level, and embeds them into ChromaDB.
-
-### Running database migrations
-
-```bash
-cd backend
-alembic upgrade head
-```
-
----
-
-## Testing
-
-```bash
-# Backend unit tests
-cd backend
-pytest
-
-# Specifically the two risk-critical tests:
-pytest tests/test_urgency_gate.py         # asserts gated cases can't reach /matches
-pytest tests/test_audit_immutability.py   # asserts UPDATE/DELETE on audit_events fails
-
-# Retrieval faithfulness (Ragas)
-pytest tests/test_hybrid_matcher.py
-
-# E2E (Playwright)
-cd frontend
-npx playwright install     # first time only
-npx playwright test
-```
-
----
-
 ## Team & Ownership
 
 | Member | Owns |
 |---|---|
-| **Riya** | Backend core (`intake/`, `extraction/`, `triage/` incl. `gate.py`, `models/`), Docker & Docker Compose, DB migrations |
-| **Akash** | Citizen-facing frontend (`(citizen)/`), design system (Tailwind tokens, shadcn styling, locales), `documentApi.ts` |
-| **Joy** | Operator-facing frontend (`(operator)/`), `MatchCard.tsx`, `AuditTimeline.tsx`, `apiClient.ts`, `caseApi.ts` |
-| **Divyansh** | Deployment (Nginx, CI/CD, EC2), testing (`test_urgency_gate.py`, `test_audit_immutability.py`, Playwright E2E), demo rehearsal |
+| **Riya** | Backend core (`intake/`, `speech/`, `extraction/`, `triage/` incl. the hard gate, `models/`), Docker & Docker Compose, DB migrations |
+| **Akash** | Citizen-facing frontend, design system (Tailwind tokens, shadcn styling, locales), `documentApi.ts` |
+| **Joy** | Operator-facing frontend, `MatchCard.tsx`, `AuditTimeline.tsx`, `apiClient.ts`, `caseApi.ts` |
+| **Divyansh** | Deployment (Nginx, CI/CD, EC2), testing (risk-gate and audit-immutability tests, Playwright E2E), demo rehearsal |
 
 Full role breakdown, technical objectives, and integration points are in [`docs/`](docs/).
 
@@ -252,24 +168,26 @@ Full role breakdown, technical objectives, and integration points are in [`docs/
 
 ## Documentation
 
-- [`docs/NyayaSetu_System_Design_Report.md`](docs/NyayaSetu_System_Design_Report.md) — Requirements, HLD, LLD, infra/security, 36-hour feasibility check
+- [`docs/NyayaSetu_System_Design_Report_v2.md`](docs/NyayaSetu_System_Design_Report_v2.md) — Requirements, HLD, LLD, infra/security, 36-hour feasibility check
 - [`docs/NyayaSetu_File_Structure_and_Data_Flow.md`](docs/NyayaSetu_File_Structure_and_Data_Flow.md) — Full repo structure with reasoning, and a traced file-to-file request flow
-- [`docs/demo_script.md`](docs/demo_script.md) — The 5-step judge walkthrough
+- [`docs/demo_script.md`](docs/demo_script.md) — The judge walkthrough
 
 ---
 
 ## Known Limitations (Hackathon Scope)
 
-This build intentionally cuts scope to prioritize the demonstrable core differentiators. Explicitly **not** implemented in the hackathon build:
+This build intentionally cuts scope to prioritize the demonstrable core differentiators. Explicitly **not** implemented as real, live integrations in the hackathon build:
 
+- **NALSA LSAMS submission** — the full internal flow (payload construction, audit logging, locked-case UX) is built, but points at a **mocked** endpoint. Real integration requires an NALSA/DLSA partnership and is a production dependency outside this team's control.
+- **NALSA portal tracking** — surfaced as a deep-link using the mocked Diary Number; no live polling/scraping of the real portal.
 - Kubernetes / multi-region deployment
-- Full DPDP Act 2023 compliance implementation (consent flows are UI-only, not a full data-rights pipeline)
+- Full DPDP Act 2023 compliance implementation (consent flows are UI-only)
 - LayoutLM-based document parsing (regex/heuristic parsers used instead)
 - Production-grade OAuth2 provider integration
 - TLS with a fully provisioned domain (unless pre-arranged before build start)
-- High-accuracy Hindi OCR (operator correction UI is the actual reliability mechanism, not raw OCR precision)
+- High-accuracy Hindi OCR/STT (operator correction and full-transcript review are the actual reliability mechanisms, not raw model precision)
 
-See §5 of the [system design report](docs/NyayaSetu_System_Design_Report.md) for the full feasibility reasoning.
+See §5 of the [system design report](docs/NyayaSetu_System_Design_Report_v2.md) for the full feasibility reasoning.
 
 ---
 
