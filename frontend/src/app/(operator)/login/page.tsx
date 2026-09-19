@@ -46,11 +46,21 @@ function LoginForm() {
           display_name: username || "Demo Paralegal",
         } as unknown as TokenPair;
       } else {
-        response = await apiFetch<TokenPair>("/auth/login", {
-          method: "POST",
-          body: { username, password },
-          skipAuth: true,
+        const form = new URLSearchParams();
+        form.set('username', username);
+        form.set('password', password);
+        
+        const BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000").replace(/\/$/, '');
+        const res = await fetch(`${BASE_URL}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: form.toString(),
         });
+        
+        if (!res.ok) {
+          throw new Error("Invalid username or password");
+        }
+        response = await res.json() as TokenPair;
       }
       setStoredToken(response.access_token);
       const next = searchParams.get("next") ?? "/queue";

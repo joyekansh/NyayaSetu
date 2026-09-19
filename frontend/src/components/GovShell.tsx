@@ -172,9 +172,9 @@ function GovHeader({ lang }: { lang: 'en' | 'hi' }) {
 const NAV_LINKS = [
   { href: '/upload', label: 'File a Request', labelHi: 'आवेदन करें' },
   { href: '/status', label: 'Track Status', labelHi: 'स्थिति देखें' },
-  { href: '#schemes', label: 'Legal Schemes', labelHi: 'कानूनी योजनाएं' },
-  { href: '#help', label: 'Help & FAQ', labelHi: 'सहायता' },
-  { href: '#contact', label: 'Contact DLSA', labelHi: 'संपर्क करें' },
+  { href: '/schemes', label: 'Legal Schemes', labelHi: 'कानूनी योजनाएं' },
+  { href: '/faq', label: 'Help & FAQ', labelHi: 'सहायता' },
+  { href: '/contact', label: 'Contact DLSA', labelHi: 'संपर्क करें' },
 ];
 
 function GovNav({ lang }: { lang: 'en' | 'hi' }) {
@@ -233,8 +233,8 @@ function GovNav({ lang }: { lang: 'en' | 'hi' }) {
 const SERVICES = [
   { icon: '', title: 'File Legal Aid Request', titleHi: 'विधिक सहायता हेतु आवेदन', desc: 'Submit documents & get scheme matches', href: '/upload', color: 'gov-tile--blue' },
   { icon: '', title: 'Track Your Case', titleHi: 'केस की स्थिति जांचें', desc: 'Check real-time status of your request', href: '/status', color: 'gov-tile--green' },
-  { icon: '', title: 'Know Your Rights', titleHi: 'अपने अधिकार जानें', desc: 'Browse legal schemes & eligibility', href: '#schemes', color: 'gov-tile--orange' },
-  { icon: '', title: 'Find DLSA Office', titleHi: 'DLSA कार्यालय खोजें', desc: 'Locate your district legal services authority', href: '#contact', color: 'gov-tile--purple' },
+  { icon: '', title: 'Know Your Rights', titleHi: 'अपने अधिकार जानें', desc: 'Browse legal schemes & eligibility', href: '/schemes', color: 'gov-tile--orange' },
+  { icon: '', title: 'Find DLSA Office', titleHi: 'DLSA कार्यालय खोजें', desc: 'Locate your district legal services authority', href: '/contact', color: 'gov-tile--purple' },
   { icon: '', title: 'Legal Aid Helpline', titleHi: 'विधिक सहायता हेल्पलाइन', desc: 'Call 15100 — free legal aid helpline', href: 'tel:15100', color: 'gov-tile--red' },
   { icon: '', title: 'Download Forms', titleHi: 'फॉर्म डाउनलोड करें', desc: 'Official forms in PDF/Hindi/English', href: '#forms', color: 'gov-tile--teal' },
 ];
