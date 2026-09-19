@@ -15,7 +15,7 @@ import CameraCapture from '@/components/CameraCapture';
 import { citizenAuth, HttpError } from '@/lib/httpClient';
 import { citizenCaseApi } from '@/lib/citizenCaseApi';
 import { documentApi } from '@/lib/documentApi';
-import { appendCleanTranscript } from '@/lib/speechTranscript';
+import { cleanSpeechTranscript } from '@/lib/speechTranscript';
 import type { CaseSummary, Language } from '@/types/api';
 
 // Extend Window for webkit prefix
@@ -54,7 +54,8 @@ export default function CitizenUploadPage() {
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const committedTranscriptRef = useRef('');
+  /** Text that existed in the grievance box before the user pressed record. */
+  const baseTextRef = useRef('');
 
   // Step 4 — Consent
   const [consent, setConsent] = useState(false);
@@ -83,29 +84,39 @@ export default function CitizenUploadPage() {
       setIsRecording(false);
       return;
     }
+
+    // Snapshot whatever the user typed before pressing record
+    baseTextRef.current = grievance;
+
     const rec = new SpeechRec();
     rec.lang = language === 'hi' ? 'hi-IN' : 'en-IN';
     rec.continuous = true;
     rec.interimResults = true;
+
     rec.onresult = (event: SpeechRecognitionEvent) => {
-      let transcript = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
+      // Rebuild the spoken text from scratch on every event.
+      // This avoids duplication — we never append, we always replace.
+      let finalTranscript = '';
+      let interimTranscript = '';
+      for (let i = 0; i < event.results.length; i++) {
+        const text = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
-          transcript += ` ${event.results[i][0].transcript}`;
+          finalTranscript += text;
+        } else {
+          interimTranscript += text;
         }
       }
-      const cleaned = transcript.trim();
-      if (cleaned && !committedTranscriptRef.current.toLowerCase().includes(cleaned.toLowerCase())) {
-        committedTranscriptRef.current = appendCleanTranscript(committedTranscriptRef.current, cleaned);
-        setGrievance((prev) => appendCleanTranscript(prev, cleaned));
-      }
+      const raw = (finalTranscript + ' ' + interimTranscript).replace(/\s+/g, ' ').trim();
+      const spoken = cleanSpeechTranscript(raw);
+      const base = baseTextRef.current.trimEnd();
+      setGrievance(base ? base + ' ' + spoken : spoken);
     };
     rec.onerror = () => setIsRecording(false);
     rec.onend = () => setIsRecording(false);
     recognitionRef.current = rec;
     rec.start();
     setIsRecording(true);
-  }, [isRecording, language]);
+  }, [isRecording, language, grievance]);
 
   const toggleAudioRecording = useCallback(async () => {
     if (isRecording && mediaRecorderRef.current) {
@@ -462,10 +473,7 @@ export default function CitizenUploadPage() {
             {/* Mic button — pinned inside the textarea bottom-right */}
             <button
               type="button"
-              onClick={() => {
-                committedTranscriptRef.current = grievance;
-                toggleRecording();
-              }}
+              onClick={toggleRecording}
               title={isRecording ? 'Stop recording' : 'Start voice input'}
               aria-label={isRecording ? 'Stop voice recording' : 'Start voice recording'}
               className={`absolute bottom-3 right-3 flex h-10 w-10 items-center justify-center rounded-full border-2 text-lg transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
