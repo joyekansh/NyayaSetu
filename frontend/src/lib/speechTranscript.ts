@@ -27,6 +27,13 @@ export function appendCleanTranscript(existing: string, next: string): string {
   if (!cleaned) return existing.trim();
   const base = existing.trim();
   if (!base) return cleaned;
+  // Some browsers emit the entire finalized transcript again on every event.
+  // Treat a longer cumulative chunk as an update, not a second sentence.
+  const baseLower = base.toLowerCase();
+  const cleanedLower = cleaned.toLowerCase();
+  if (cleanedLower.startsWith(`${baseLower} `) || cleanedLower === baseLower) {
+    return cleaned;
+  }
   if (base.toLowerCase().endsWith(cleaned.toLowerCase())) return base;
   return `${base} ${cleaned}`.trim();
 }
@@ -49,11 +56,13 @@ function collapseRepeatedPhrases(input: string): string {
     const output: string[] = [];
     while (i < words.length) {
       const phrase = words.slice(i, i + size).map(normalize).join(' ');
-      const next = words.slice(i + size, i + size * 2).map(normalize).join(' ');
       output.push(...words.slice(i, i + size));
       i += size;
-      while (phrase && phrase === next) {
+      // Skip consecutive duplicate phrases
+      let nextPhrase = words.slice(i, i + size).map(normalize).join(' ');
+      while (phrase && phrase === nextPhrase && i + size <= words.length) {
         i += size;
+        nextPhrase = words.slice(i, i + size).map(normalize).join(' ');
       }
     }
     words.splice(0, words.length, ...output);
@@ -95,8 +104,8 @@ function collapseOverlappingPrefixes(input: string): string {
 
 function keepLongestRepeatedClause(input: string): string {
   const words = input.split(/\s+/).filter(Boolean);
-  if (words.length < 12) return input;
-  for (let size = Math.min(12, Math.floor(words.length / 2)); size >= 5; size -= 1) {
+  if (words.length < 6) return input;
+  for (let size = Math.min(12, Math.floor(words.length / 2)); size >= 3; size -= 1) {
     for (let start = 0; start + size * 2 <= words.length; start += 1) {
       const phrase = words.slice(start, start + size).map(normalize).join(' ');
       const nextWindow = words.slice(start + size).map(normalize).join(' ');
@@ -104,10 +113,10 @@ function keepLongestRepeatedClause(input: string): string {
       if (phrase && repeatIndex >= 0) {
         const repeatWordOffset = nextWindow.slice(0, repeatIndex).split(/\s+/).filter(Boolean).length;
         const repeatStart = start + size + repeatWordOffset;
-        return [
+        return keepLongestRepeatedClause([
           ...words.slice(0, repeatStart),
           ...words.slice(repeatStart + size),
-        ].join(' ');
+        ].join(' '));
       }
     }
   }
@@ -115,5 +124,6 @@ function keepLongestRepeatedClause(input: string): string {
 }
 
 function normalize(word: string): string {
-  return word.toLowerCase().replace(/[^a-z0-9]/g, '');
+  // Preserve Hindi (Devanagari), Latin, digits — strip only punctuation/whitespace
+  return word.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
 }
