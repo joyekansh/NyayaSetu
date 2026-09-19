@@ -106,6 +106,48 @@ def test_upload_route_creates_document_and_enqueues_after_commit(
     assert enqueued == [body["id"]]
 
 
+def test_upload_route_accepts_speech_recording_doc_type(
+    client: tuple[TestClient, sessionmaker[Session], list[str]],
+) -> None:
+    test_client, factory, enqueued = client
+    with factory() as session:
+        case = CaseRecord(language="hi")
+        session.add(case)
+        session.commit()
+        case_id = case.id
+
+    response = test_client.post(
+        f"/api/v1/cases/{case_id}/documents",
+        data={"doc_type": "speech_recording"},
+        files={"file": ("grievance.mp3", b"ID3fake audio data", "audio/mpeg")},
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["document_type"] == "SPEECH_RECORDING"
+    assert enqueued == [body["id"]]
+
+
+def test_upload_route_accepts_browser_webm_speech_recording(
+    client: tuple[TestClient, sessionmaker[Session], list[str]],
+) -> None:
+    test_client, factory, _ = client
+    with factory() as session:
+        case = CaseRecord(language="hi")
+        session.add(case)
+        session.commit()
+        case_id = case.id
+
+    response = test_client.post(
+        f"/api/v1/cases/{case_id}/documents",
+        data={"doc_type": "speech_recording"},
+        files={"file": ("grievance.webm", b"\x1a\x45\xdf\xa3webm-audio", "audio/webm")},
+    )
+
+    assert response.status_code == 201
+    assert response.json()["document_type"] == "SPEECH_RECORDING"
+
+
 def test_create_case_requires_consent(client: tuple[TestClient, sessionmaker[Session], list[str]]) -> None:
     test_client, _, _ = client
     denied = test_client.post("/api/v1/cases", json={"consent_given": False, "language": "en"})

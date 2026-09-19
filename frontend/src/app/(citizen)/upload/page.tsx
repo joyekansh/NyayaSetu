@@ -29,6 +29,7 @@ interface Staged {
   file: Blob;
   previewUrl: string;
   isPdf: boolean;
+  docType?: 'speech_recording';
 }
 
 export default function CitizenUploadPage() {
@@ -50,6 +51,8 @@ export default function CitizenUploadPage() {
   const [grievance, setGrievance] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   // Step 4 — Consent
   const [consent, setConsent] = useState(false);
@@ -99,6 +102,45 @@ export default function CitizenUploadPage() {
     setIsRecording(true);
   }, [isRecording, language]);
 
+  const toggleAudioRecording = useCallback(async () => {
+    if (isRecording && mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop();
+      recognitionRef.current?.stop();
+      setIsRecording(false);
+      return;
+    }
+
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      toggleRecording();
+      return;
+    }
+
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+    audioChunksRef.current = [];
+    recorder.ondataavailable = (event) => {
+      if (event.data.size > 0) audioChunksRef.current.push(event.data);
+    };
+    recorder.onstop = () => {
+      stream.getTracks().forEach((track) => track.stop());
+      const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+      if (blob.size > 0) {
+        setStaged((prev) => [
+          ...prev,
+          {
+            file: blob,
+            previewUrl: URL.createObjectURL(blob),
+            isPdf: false,
+            docType: 'speech_recording',
+          },
+        ]);
+      }
+    };
+    mediaRecorderRef.current = recorder;
+    recorder.start();
+    toggleRecording();
+  }, [isRecording, toggleRecording]);
+
   async function submit() {
     setSubmitting(true);
     setError(null);
@@ -142,9 +184,13 @@ export default function CitizenUploadPage() {
         await documentApi.upload({
           caseId: created.id,
           file: item.file,
-          // Backend requires doc_type; OCR pipeline will refine it later
-          docType: 'income_cert',
-          filename: item.isPdf ? `document_${i + 1}.pdf` : `document_${i + 1}.jpg`,
+          docType: item.docType ?? 'income_cert',
+          filename:
+            item.docType === 'speech_recording'
+              ? `grievance_${i + 1}.webm`
+              : item.isPdf
+                ? `document_${i + 1}.pdf`
+                : `document_${i + 1}.jpg`,
         });
       }
 
@@ -321,7 +367,12 @@ export default function CitizenUploadPage() {
                     key={item.previewUrl}
                     className="group relative overflow-hidden rounded-xl border border-surface-200 bg-surface-50 animate-slide-up"
                   >
-                    {item.isPdf ? (
+                    {item.docType === 'speech_recording' ? (
+                      <div className="h-36 w-full flex flex-col items-center justify-center bg-brand-50 text-brand-600">
+                        <span className="text-4xl">🎙️</span>
+                        <span className="text-xs font-medium mt-1">Voice recording</span>
+                      </div>
+                    ) : item.isPdf ? (
                       <div className="h-36 w-full flex flex-col items-center justify-center bg-red-50 text-red-500">
                         <span className="text-4xl">📄</span>
                         <span className="text-xs font-medium mt-1">PDF Document</span>
@@ -418,6 +469,14 @@ export default function CitizenUploadPage() {
               🎙️
             </button>
           </div>
+
+          <button
+            type="button"
+            onClick={toggleAudioRecording}
+            className="btn-secondary"
+          >
+            {isRecording ? 'Stop & attach voice recording' : 'Record voice as evidence'}
+          </button>
 
           {isRecording && (
             <p className="flex items-center gap-2 text-sm text-red-600 font-medium animate-pulse">
