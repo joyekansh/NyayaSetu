@@ -32,7 +32,8 @@ export async function getQueue(): Promise<{ items: QueueItem[] }> {
       sla_seconds_remaining: 3600,
       district: c.district || 'Unknown',
       document_count: 1,
-      status: c.status
+      status: c.status,
+      created_at: c.created_at || new Date().toISOString()
     }))
   };
 }

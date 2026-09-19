@@ -128,6 +128,7 @@ describe('citizenCaseApi', () => {
         gated: false,
         gate_notice: null,
         triage_signals: [],
+        triage_reasoning: null,
       };
       mockRequest.mockResolvedValueOnce(detail);
 
@@ -162,6 +163,7 @@ describe('citizenCaseApi', () => {
             evidence: 'Keywords detected in description',
           },
         ],
+        triage_reasoning: null,
       };
       mockRequest.mockResolvedValueOnce(gatedDetail);
 
