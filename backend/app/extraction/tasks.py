@@ -134,17 +134,23 @@ class DocumentExtractionProcessor:
         analysis = analyse_grievance(full_grievance)
         
         flags = analysis.to_urgency_dict()
+        
+        # Merge raw intake answers so explicit user inputs (e.g. form checkboxes) aren't lost
+        merged_intake_answers = dict(intake_answers)
+        merged_intake_answers.update(flags)
+
         if extraction_failed:
-            flags["high_uncertainty_flag"] = True
+            merged_intake_answers["high_uncertainty_flag"] = True
             
         triage_input = build_urgency_case_data(
             extracted, 
-            intake_answers=flags, 
+            intake_answers=merged_intake_answers, 
             reference_date=self._reference_date
         )
         triage = score_case(triage_input)
         case.urgency_score = float(triage.score)
         case.urgency_tier = triage.tier
+        case.triage_reasoning = triage.reasoning
         case.status = CaseStatus.TRIAGED
         self._session.flush()
         self._audit.append(
@@ -154,6 +160,7 @@ class DocumentExtractionProcessor:
                 "score": triage.score,
                 "tier": triage.tier.value,
                 "signals": [{"name": signal.name, "weight": signal.weight} for signal in triage.signals],
+                "reasoning": triage.reasoning,
             },
         )
         if extraction_error is not None:

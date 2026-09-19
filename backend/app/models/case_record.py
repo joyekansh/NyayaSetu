@@ -29,5 +29,6 @@ class CaseRecord(Base):
     intake_answers: Mapped[dict[str, object]] = mapped_column(type_=JSON, default=dict, nullable=False)
     gate_release_operator: Mapped[str | None] = mapped_column(String(255), nullable=True)
     gate_release_reason: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    triage_reasoning: Mapped[str | None] = mapped_column(String(2000), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)

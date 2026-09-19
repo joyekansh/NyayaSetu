@@ -23,6 +23,7 @@ class SchemeMatch(Base):
     clause_id = Column(String, nullable=False)
     confidence_score = Column(Float, nullable=False)
     status = Column(Enum(MatchStatus), nullable=False, default=MatchStatus.PENDING)
+    operator_reason = Column(String(2000), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     __table_args__ = (
