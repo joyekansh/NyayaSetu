@@ -43,7 +43,6 @@ export default function CitizenUploadPage() {
   const [district, setDistrict] = useState('');
   const [language, setLanguage] = useState<Language>('en');
   const [monthlyIncome, setMonthlyIncome] = useState('');
-  const [description, setDescription] = useState('');
 
   // Step 2 — Documents
   const [staged, setStaged] = useState<Staged[]>([]);
@@ -174,7 +173,7 @@ export default function CitizenUploadPage() {
         language,
         intake_answers: {
           grievance_type: grievance,
-          description: description.trim(),
+          description: '',
           declared_monthly_income: monthlyIncome.trim(),
         },
         consent_given: true,
@@ -186,7 +185,7 @@ export default function CitizenUploadPage() {
         await documentApi.upload({
           caseId: created.id,
           file: item.file,
-          docType: item.docType ?? undefined,
+          docType: item.docType ?? 'other',
           filename:
             item.docType === 'speech_recording'
               ? `grievance_${i + 1}.webm`
@@ -309,17 +308,6 @@ export default function CitizenUploadPage() {
               </select>
             </Field>
           </div>
-
-          <Field label="Describe what happened">
-            <textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={4}
-              placeholder="Include dates and anything urgent, such as a deadline on a notice."
-              className="input-field resize-none"
-            />
-          </Field>
 
           <div className="flex justify-end pt-2">
             <button

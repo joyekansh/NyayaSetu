@@ -35,7 +35,8 @@ export type DocType =
   | 'eviction_notice'
   | 'wage_slip'
   | 'medical_report'
-  | 'speech_recording';
+  | 'speech_recording'
+  | 'other';
 
 export type OperatorDecision = 'pending' | 'approved' | 'overridden' | 'rejected';
 
