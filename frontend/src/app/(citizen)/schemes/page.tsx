@@ -1,4 +1,3 @@
-import GovShell from "@/components/GovShell";
 import Link from "next/link";
 
 const SCHEMES = [
@@ -24,7 +23,7 @@ const SCHEMES = [
 
 export default function SchemesPage() {
   return (
-    <GovShell>
+    <>
       <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900">Legal Aid Schemes</h1>
@@ -68,6 +67,6 @@ export default function SchemesPage() {
           ))}
         </div>
       </div>
-    </GovShell>
+    </>
   );
 }

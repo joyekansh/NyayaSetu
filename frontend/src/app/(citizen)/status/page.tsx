@@ -2,7 +2,6 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import GovShell from "@/components/GovShell";
 
 export default function StatusLandingPage() {
   const router = useRouter();
@@ -27,7 +26,7 @@ export default function StatusLandingPage() {
   }
 
   return (
-    <GovShell>
+    <>
       <div className="max-w-2xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
         <div className="bg-white shadow sm:rounded-lg">
           <div className="px-4 py-5 sm:p-6">
@@ -67,6 +66,6 @@ export default function StatusLandingPage() {
           </div>
         </div>
       </div>
-    </GovShell>
+    </>
   );
 }

@@ -1,4 +1,4 @@
-import GovShell from "@/components/GovShell";
+
 
 const OFFICES = [
   {
@@ -26,7 +26,7 @@ const OFFICES = [
 
 export default function ContactPage() {
   return (
-    <GovShell>
+    <>
       <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900">Contact DLSA</h1>
@@ -69,6 +69,6 @@ export default function ContactPage() {
           ))}
         </div>
       </div>
-    </GovShell>
+    </>
   );
 }
