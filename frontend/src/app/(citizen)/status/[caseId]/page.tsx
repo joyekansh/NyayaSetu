@@ -20,10 +20,6 @@ const PIPELINE_STEPS: { status: CaseStatus; label: string; description: string }
   { status: 'RECEIVED', label: 'Submitted', description: 'Your case has been received.' },
   { status: 'EXTRACTED', label: 'Under Extraction', description: 'Documents are being read and fields extracted.' },
   { status: 'TRIAGED', label: 'Triage Complete', description: 'Urgency assessment has been run.' },
-  { status: 'MATCHED', label: 'Schemes Matched', description: 'Legal aid schemes have been identified.' },
-  { status: 'IN_REVIEW', label: 'Under Review', description: 'A legal aid worker is reviewing your case.' },
-  { status: 'REFERRED', label: 'Referred', description: 'Your case has been forwarded to the relevant authority.' },
-  { status: 'CLOSED', label: 'Closed', description: 'This case is complete.' },
 ];
 
 function stepIndex(status: CaseStatus): number {
@@ -104,7 +100,7 @@ export default function CaseStatusPage() {
           <span className="font-mono text-xs bg-surface-100 rounded-lg px-2.5 py-1">
             {caseId.slice(0, 8)}…
           </span>
-          {caseData.urgency_tier && (
+          {caseData.urgency_tier && !['RECEIVED', 'EXTRACTED'].includes(caseData.status) && (
             <span className={tierColor}>{caseData.urgency_tier}</span>
           )}
           {caseData.district && (
@@ -191,46 +187,7 @@ export default function CaseStatusPage() {
         </ol>
       </div>
 
-      {/* Documents summary */}
-      {caseData.documents.length > 0 && (
-        <div className="card-flat">
-          <h2 className="font-heading text-base font-semibold text-surface-900 mb-3">
-            Documents ({caseData.documents.length})
-          </h2>
-          <ul className="divide-y divide-surface-100">
-            {caseData.documents.map((doc) => (
-              <li key={doc.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 py-3 items-start">
-                <div>
-                  <p className="text-sm font-medium text-surface-800">
-                    {doc.doc_type?.replace(/_/g, ' ') ?? 'Document'}
-                  </p>
-                  <p className="text-xs text-surface-500">
-                    {doc.ocr_status === 'DONE'
-                      ? `Extracted · ${Math.round((doc.ocr_confidence ?? 0) * 100)}% confidence`
-                      : doc.ocr_status === 'FAILED'
-                        ? 'Extraction failed'
-                        : doc.ocr_status === 'PROCESSING'
-                          ? 'Processing…'
-                          : 'Pending'}
-                  </p>
-                </div>
-                <span
-                  className={[
-                    'badge',
-                    doc.ocr_status === 'DONE'
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : doc.ocr_status === 'FAILED'
-                        ? 'bg-red-100 text-red-800'
-                        : 'bg-surface-100 text-surface-600',
-                  ].join(' ')}
-                >
-                  {doc.ocr_status}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+
 
       {/* Actions */}
       {!caseData.gated && caseData.status === 'MATCHED' && (
