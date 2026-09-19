@@ -10,11 +10,12 @@
  */
 
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import CameraCapture from '@/components/CameraCapture';
 import { citizenAuth, HttpError } from '@/lib/httpClient';
 import { citizenCaseApi } from '@/lib/citizenCaseApi';
 import { documentApi } from '@/lib/documentApi';
+import { appendCleanTranscript } from '@/lib/speechTranscript';
 import type { CaseSummary, Language } from '@/types/api';
 
 // Extend Window for webkit prefix
@@ -88,12 +89,13 @@ export default function CitizenUploadPage() {
     rec.onresult = (event: SpeechRecognitionEvent) => {
       let transcript = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        transcript += event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          transcript += ` ${event.results[i][0].transcript}`;
+        }
       }
-      setGrievance((prev) => {
-        const base = prev.trimEnd();
-        return base ? base + ' ' + transcript : transcript;
-      });
+      if (transcript.trim()) {
+        setGrievance((prev) => appendCleanTranscript(prev, transcript));
+      }
     };
     rec.onerror = () => setIsRecording(false);
     rec.onend = () => setIsRecording(false);
