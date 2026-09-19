@@ -17,4 +17,12 @@ describe('speech transcript cleanup', () => {
       'My landlord locked the room',
     );
   });
+
+  it('replaces cumulative browser chunks instead of duplicating them', () => {
+    let transcript = '';
+    for (const chunk of ['Mera', 'Mera Mera Pati', 'Mera Mera Pati Roj', 'Mera Mera Pati Roj Sharab Pi']) {
+      transcript = appendCleanTranscript(transcript, chunk);
+    }
+    expect(transcript).toBe('Mera Pati Roj Sharab Pi');
+  });
 });

@@ -27,6 +27,13 @@ export function appendCleanTranscript(existing: string, next: string): string {
   if (!cleaned) return existing.trim();
   const base = existing.trim();
   if (!base) return cleaned;
+  // Some browsers emit the entire finalized transcript again on every event.
+  // Treat a longer cumulative chunk as an update, not a second sentence.
+  const baseLower = base.toLowerCase();
+  const cleanedLower = cleaned.toLowerCase();
+  if (cleanedLower.startsWith(`${baseLower} `) || cleanedLower === baseLower) {
+    return cleaned;
+  }
   if (base.toLowerCase().endsWith(cleaned.toLowerCase())) return base;
   return `${base} ${cleaned}`.trim();
 }

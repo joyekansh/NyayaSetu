@@ -54,6 +54,7 @@ export default function CitizenUploadPage() {
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const committedTranscriptRef = useRef('');
 
   // Step 4 — Consent
   const [consent, setConsent] = useState(false);
@@ -93,8 +94,10 @@ export default function CitizenUploadPage() {
           transcript += ` ${event.results[i][0].transcript}`;
         }
       }
-      if (transcript.trim()) {
-        setGrievance((prev) => appendCleanTranscript(prev, transcript));
+      const cleaned = transcript.trim();
+      if (cleaned && !committedTranscriptRef.current.toLowerCase().includes(cleaned.toLowerCase())) {
+        committedTranscriptRef.current = appendCleanTranscript(committedTranscriptRef.current, cleaned);
+        setGrievance((prev) => appendCleanTranscript(prev, cleaned));
       }
     };
     rec.onerror = () => setIsRecording(false);
@@ -140,8 +143,8 @@ export default function CitizenUploadPage() {
     };
     mediaRecorderRef.current = recorder;
     recorder.start();
-    toggleRecording();
-  }, [isRecording, toggleRecording]);
+    setIsRecording(true);
+  }, [isRecording]);
 
   async function submit() {
     setSubmitting(true);
@@ -459,7 +462,10 @@ export default function CitizenUploadPage() {
             {/* Mic button — pinned inside the textarea bottom-right */}
             <button
               type="button"
-              onClick={toggleRecording}
+              onClick={() => {
+                committedTranscriptRef.current = grievance;
+                toggleRecording();
+              }}
               title={isRecording ? 'Stop recording' : 'Start voice input'}
               aria-label={isRecording ? 'Stop voice recording' : 'Start voice recording'}
               className={`absolute bottom-3 right-3 flex h-10 w-10 items-center justify-center rounded-full border-2 text-lg transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
