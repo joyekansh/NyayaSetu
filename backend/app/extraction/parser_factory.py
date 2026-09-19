@@ -23,6 +23,12 @@ def parser_for(document_type: object) -> DocumentParser:
         return EvictionNoticeParser()
     if normalized == DocumentType.AADHAAR.value:
         return AadhaarParser()
+    if normalized == DocumentType.OTHER.value:
+        from app.extraction.parsers.base import RegexDocumentParser
+        class OtherParser(RegexDocumentParser):
+            document_type = DocumentType.OTHER.value
+            field_patterns = ()
+        return OtherParser()
 
     raise UnsupportedDocumentTypeError("unsupported document type")
 
