@@ -43,6 +43,7 @@ export const mockCaseDetailByCaseId: Record<string, CaseDetail> = {
     citizen_id: "cit_1",
     created_by_operator_id: null,
     triage_signals: [],
+    triage_reasoning: null,
     documents: [
       {
         id: "doc_1",

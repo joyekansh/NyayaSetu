@@ -199,7 +199,7 @@ export default function CitizenUploadPage() {
         await documentApi.upload({
           caseId: created.id,
           file: item.file,
-          docType: item.docType ?? 'other',
+          docType: item.docType ?? undefined,
           filename:
             item.docType === 'speech_recording'
               ? `grievance_${i + 1}.webm`

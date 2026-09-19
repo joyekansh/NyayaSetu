@@ -53,7 +53,9 @@ def _storage(settings: Settings = Depends(get_settings)) -> LocalDocumentStorage
     return LocalDocumentStorage(settings.document_storage_root)
 
 
-def _map_doc_type(raw: str) -> DocumentType:
+def _map_doc_type(raw: str | None) -> DocumentType:
+    if not raw:
+        return DocumentType.OTHER
     normalized = raw.strip().lower()
     if normalized in DOC_TYPE_ALIASES:
         return DOC_TYPE_ALIASES[normalized]
@@ -88,7 +90,7 @@ def create_case(
 def upload_document(
     case_id: uuid.UUID,
     file: Annotated[UploadFile, File()],
-    doc_type: Annotated[str, Form()],
+    doc_type: Annotated[str | None, Form()] = None,
     db: Session = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
     storage: LocalDocumentStorage = Depends(_storage),
