@@ -25,7 +25,17 @@ def build_urgency_case_data(
             "eviction_notice_days_remaining",
         ):
             if key in intake_answers:
-                data[key] = intake_answers[key]
+                # Use 'or' so explicit True values aren't overwritten by False
+                data[key] = data.get(key, False) or intake_answers[key]
+                
+        # Additional explicit intake answer integrations
+        age = intake_answers.get("age")
+        if age is not None:
+            try:
+                if int(age) < 18:
+                    data["minor_or_dependent_at_risk"] = True
+            except (ValueError, TypeError):
+                pass
 
     eviction_date = extracted_fields.get("eviction_date")
     if isinstance(eviction_date, str):

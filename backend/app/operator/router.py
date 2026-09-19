@@ -145,24 +145,30 @@ def create_referral(
     return {"status": case.status.value, "document_id": storage_key}
 
 
+class OperatorDecisionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    reason: str | None = Field(default=None, max_length=2000)
+
 @router.post('/cases/{case_id}/matches/{clause_id}/approve')
-def approve_match(case_id: uuid.UUID, clause_id: str, db: Session = Depends(get_db), current_user: CurrentUser = Depends(require_operator)) -> dict[str, str]:
+def approve_match(case_id: uuid.UUID, clause_id: str, body: OperatorDecisionRequest, db: Session = Depends(get_db), current_user: CurrentUser = Depends(require_operator)) -> dict[str, str]:
     case = db.get(CaseRecord, case_id)
     if case is None: raise HTTPException(status_code=404, detail='case not found')
     match = db.query(SchemeMatch).filter_by(case_id=case_id, clause_id=clause_id).first()
     if match:
         match.status = MatchStatus.APPROVED
-    AuditEventRepository(db).append(case.id, 'MATCH_APPROVED', {'operator_id': str(current_user.id), 'clause_id': clause_id})
+        match.operator_reason = body.reason
+    AuditEventRepository(db).append(case.id, 'MATCH_APPROVED', {'operator_id': str(current_user.id), 'clause_id': clause_id, 'reason': body.reason})
     db.commit()
     return {'status': 'approved'}
 
 @router.post('/cases/{case_id}/matches/{clause_id}/reject')
-def reject_match(case_id: uuid.UUID, clause_id: str, db: Session = Depends(get_db), current_user: CurrentUser = Depends(require_operator)) -> dict[str, str]:
+def reject_match(case_id: uuid.UUID, clause_id: str, body: OperatorDecisionRequest, db: Session = Depends(get_db), current_user: CurrentUser = Depends(require_operator)) -> dict[str, str]:
     case = db.get(CaseRecord, case_id)
     if case is None: raise HTTPException(status_code=404, detail='case not found')
     match = db.query(SchemeMatch).filter_by(case_id=case_id, clause_id=clause_id).first()
     if match:
         match.status = MatchStatus.REJECTED
-    AuditEventRepository(db).append(case.id, 'MATCH_REJECTED', {'operator_id': str(current_user.id), 'clause_id': clause_id})
+        match.operator_reason = body.reason
+    AuditEventRepository(db).append(case.id, 'MATCH_REJECTED', {'operator_id': str(current_user.id), 'clause_id': clause_id, 'reason': body.reason})
     db.commit()
     return {'status': 'rejected'}

@@ -76,3 +76,12 @@ class TriageResult:
     score: int
     tier: UrgencyTier
     signals: tuple[UrgencySignal, ...]
+
+    @property
+    def reasoning(self) -> str:
+        """Returns a human-readable decision log explaining the triage score."""
+        if not self.signals:
+            return f"Assigned {self.tier.value} tier (Score: {self.score}): No urgency signals detected."
+        
+        signal_details = ", ".join(f"{s.name} (+{s.weight})" for s in self.signals)
+        return f"Assigned {self.tier.value} tier (Score: {self.score}) due to: {signal_details}."
