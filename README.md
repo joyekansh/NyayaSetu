@@ -68,11 +68,11 @@ NyayaSetu sits in front of India's existing legal-aid infrastructure (NALSA, SLS
 
 **Frontend:** Next.js (React) + TypeScript, Tailwind CSS, shadcn/ui, i18next (Hindi/English)
 
-**Backend:** FastAPI (Python), Pydantic v2, Celery + Redis for async OCR/STT/extraction tasks
+**Backend:** FastAPI (Python), Pydantic v2, Celery + Redis for async tasks
 
-**Speech & OCR:** ElevenLabs Speech-to-Text, Tesseract OCR / Google Cloud Vision, regex/heuristic layout parsers
+**Speech & OCR:** Regex/heuristic layout parsers (OCR engine is mocked for deterministic testing; real integration pending)
 
-**Knowledge Retrieval:** ChromaDB, LangChain, multilingual sentence embeddings, hybrid semantic + rule-based matching
+**Knowledge Retrieval:** Deterministic rule-based matching (Semantic matching via ChromaDB is architected but currently mocked)
 
 **Data & Audit:** PostgreSQL, append-only hash-chained audit ledger
 
@@ -178,6 +178,10 @@ Full role breakdown, technical objectives, and integration points are in [`docs/
 
 This build intentionally cuts scope to prioritize the demonstrable core differentiators. Explicitly **not** implemented as real, live integrations in the hackathon build:
 
+- **OCR & Extraction**: Currently using fake OCR strategies for deterministic testing. Real Tesseract / Vision API integration and Hindi label support are pending.
+- **Semantic Matching**: ChromaDB vector store integration is architected but mocked. The system currently relies on the fully implemented deterministic rule-matcher.
+- **Operator Workflow**: The operator queue is implemented, but the final approve/reject match decisions and referral document generation are still in progress.
+- **Knowledge Base**: Uses a JSON fixture loader for statutory clauses; database-backed ingestion is pending.
 - **NALSA LSAMS submission** — the full internal flow (payload construction, audit logging, locked-case UX) is built, but points at a **mocked** endpoint. Real integration requires an NALSA/DLSA partnership and is a production dependency outside this team's control.
 - **NALSA portal tracking** — surfaced as a deep-link using the mocked Diary Number; no live polling/scraping of the real portal.
 - Kubernetes / multi-region deployment
